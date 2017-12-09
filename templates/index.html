@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Contacalorie Maiano</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/css/bootstrap.min.css" integrity="sha384-PsH8R72JQ3SOdhVi3uxftmaW6Vc51MKb0q5P2rRUpPvrszuE4W1povHYgTpBfshb" crossorigin="anonymous">
+    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.3/umd/popper.min.js" integrity="sha384-vFJXuSJphROIrBnz7yo7oB41mKfc8JzQZiCq4NCceLEaO4IHwicKwpJf9c9IpFgh" crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/js/bootstrap.min.js" integrity="sha384-alpBpkh1PFOepccYVYDB4do5UnbKysX5WZXm3XxPqe5iKTfUKjNkCk9SaVuEZflJ" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div align="center" class="footer">
+      <br/>
+      <a class="btn btn-primary" href="https://docs.google.com/forms/d/e/1FAIpQLScuztBcsl1WvmNw3a0SJtt6sonMQzOfudCmRk8f8lUc7N0Lbw/viewform?usp=sf_link" target="blank">Vai alla pagina di inserimento dati</a>
+      <br/>
+      <br/>
+    </div>
+
+    <div id="accordion" role="tablist">
+      {% for r in rips %}
+      <div class="card">
+        <div class="card-header" role="tab" id="heading{{loop.index}}">
+          <h5 class="mb-0">
+            <a {% if loop.index > 1 %} class="collapsed" {% endif %} data-toggle="collapse" href="#collapse{{loop.index}}" aria-expanded="{{'true' if loop.index==1 else 'false'}}" aria-controls="collapse{{loop.index}}">
+              Calcolo ripartizione dal {{r.date[0]}} al {{r.date[1]}}
+            </a>
+          </h5>
+        </div>
+
+        <div id="collapse{{loop.index}}" class="collapse{{' show' if loop.index == 1 else ''}}" role="tabpanel" aria-labelledby="heading{{loop.index}}" data-parent="#accordion">
+          <div class="card-body">
+            <p>
+              <h3>Primo Piano: {{r.pp | round(2)}} &euro;</h3>
+                  <a class="btn btn-primary" href="{{ url_for('report', data1=r.date[0].replace('/','-'), data2=r.date[1].replace('/','-'), costo=r.pp, appartamento='Primo Piano') }}" target="blank">Scarica Prospetto</a>
+            </p>
+            <p>
+              <h3>Secondo Piano: {{r.sp | round(2)}} &euro;</h3>
+                  <a class="btn btn-primary" href="{{ url_for('report', data1=r.date[0].replace('/','-'), data2=r.date[1].replace('/','-'), costo=r.sp, appartamento='Secondo Piano') }}" target="blank">Scarica Prospetto</a>
+            </p>
+            <p>
+              <h3>Mansarda Piccola: {{r.mp | round(2)}} &euro;</h3>
+                  <a class="btn btn-primary" href="{{ url_for('report', data1=r.date[0].replace('/','-'), data2=r.date[1].replace('/','-'), costo=r.mp, appartamento='Mansarda Piccola') }}" target="blank">Scarica Prospetto</a>
+            </p>
+            <p>
+              <h3>Mansarda Grande: {{r.mg | round(2)}} &euro;</h3>
+                  <a class="btn btn-primary" href="{{ url_for('report', data1=r.date[0].replace('/','-'), data2=r.date[1].replace('/','-'), costo=r.mg, appartamento='Mansarda Grande') }}" target="blank">Scarica Prospetto</a>
+            </p>
+            <br/>
+            <h3>Totale: {{r.totale() | round(2)}} &euro;</h3>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+
+
+
+    <div align="center" class="footer">
+      <br/>
+      Copyright &copy; {{copyright_date}} Andrea Micheli
+    </div>
+
+  </body>
+</html>
