@@ -16,8 +16,12 @@ def get_data():
     # Extract and print all of the values
     list_of_hashes = sheet.get_all_records()
     res = []
+    seen = set()
     for d in list_of_hashes:
-        res.append(Datum.from_dict(d))
+        datum = Datum.from_dict(d)
+        if datum not in seen:
+            res.append(datum)
+            seen.add(datum)
     return res
 
 
@@ -43,6 +47,41 @@ class Datum(object):
         self.h2o_calda_andata_mg = None
         self.h2o_calda_ricircolo_mg = None
         self.costo_bolletta = None
+
+    def __hash__(self):
+        return hash(self.data) + hash(self.gas_generale) + hash(self.gas_pp) + \
+            hash(self.gas_sp) + hash(self.gas_mp) + hash(self.calorie_pp_zona_giorno) + \
+            hash(self.calorie_pp_zona_notte) + hash(self.calorie_sp) + \
+            hash(self.calorie_mp) + hash(self.calorie_mg) + \
+            hash(self.calorie_h2o_calda) + hash(self.h2o_calda_andata_pp) + \
+            hash(self.h2o_calda_ricircolo_pp) + hash(self.h2o_calda_andata_sp) + \
+            hash(self.h2o_calda_ricircolo_sp) + hash(self.h2o_calda_andata_mp) + \
+            hash(self.h2o_calda_ricircolo_mp) + hash(self.h2o_calda_andata_mg) + \
+            hash(self.h2o_calda_ricircolo_mg) + hash(self.costo_bolletta)
+
+    def __eq__(self, oth):
+        if self.data != oth.data: return False
+        if self.gas_generale != oth.gas_generale: return False
+        if self.gas_pp != oth.gas_pp: return False
+        if self.gas_sp != oth.gas_sp: return False
+        if self.gas_mp != oth.gas_mp: return False
+        if self.calorie_pp_zona_giorno != oth.calorie_pp_zona_giorno: return False
+        if self.calorie_pp_zona_notte != oth.calorie_pp_zona_notte: return False
+        if self.calorie_sp != oth.calorie_sp: return False
+        if self.calorie_mp != oth.calorie_mp: return False
+        if self.calorie_mg != oth.calorie_mg: return False
+        if self.calorie_h2o_calda != oth.calorie_h2o_calda: return False
+        if self.h2o_calda_andata_pp != oth.h2o_calda_andata_pp: return False
+        if self.h2o_calda_ricircolo_pp != oth.h2o_calda_ricircolo_pp: return False
+        if self.h2o_calda_andata_sp != oth.h2o_calda_andata_sp: return False
+        if self.h2o_calda_ricircolo_sp != oth.h2o_calda_ricircolo_sp: return False
+        if self.h2o_calda_andata_mp != oth.h2o_calda_andata_mp: return False
+        if self.h2o_calda_ricircolo_mp != oth.h2o_calda_ricircolo_mp: return False
+        if self.h2o_calda_andata_mg != oth.h2o_calda_andata_mg: return False
+        if self.h2o_calda_ricircolo_mg != oth.h2o_calda_ricircolo_mg: return False
+        if self.costo_bolletta != oth.costo_bolletta: return False
+
+        return True
 
     @staticmethod
     def from_dict(d):
