@@ -23,15 +23,23 @@ class HourReport(object):
         return [w for w in self.workplaces if ('ferie' in w.lower() or 'permesso' in w.lower())]
 
     @property
+    def illnesses(self):
+        return [w for w in self.workplaces if 'malattia' in w.lower()]
+
+    @property
     def real_workplaces(self):
-        return [w for w in self.workplaces if w not in self.vacations]
+        return [w for w in self.workplaces if w not in (self.vacations + self.illnesses)]
 
     def get_worked_hours(self, day, workplace):
-        if workplace not in self.vacations:
+        if workplace not in (self.vacations + self.illnesses):
             for f in self.vacations:
                 wh = self.get_worked_hours(day, f)
                 if wh is not None:
                     return 'FERIE'
+            for f in self.illnesses:
+                wh = self.get_worked_hours(day, f)
+                if wh is not None:
+                    return 'MALATTIA'
                 
         for (d, p, sh, sm, eh, em) in self.worked_hours:
             if d == day and p == workplace:
@@ -92,6 +100,8 @@ def build_pdf_report(report, show_hours=False):
                     r += ['', '', '']
                 elif wt == 'FERIE':
                     r += ['', '', '']
+                elif wt == 'MALATTIA':
+                    r += ['', '', '']
                 else:
                     (sh, sm, eh, em) = wt
                     wm = ((eh - sh) * 60) + (em - sm)
@@ -103,7 +113,7 @@ def build_pdf_report(report, show_hours=False):
 
             vacation = False
             r.append('')
-            for wp in report.vacations:
+            for wp in report.vacations + report.illnesses:
                 wt = report.get_worked_hours(d, wp)
                 if wt is not None:
                     r.append(wp)
