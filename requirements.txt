@@ -1,0 +1,5 @@
+flask
+pypdf2
+reportlab
+gspread
+oauth2client

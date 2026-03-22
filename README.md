@@ -1,2 +1,2 @@
-# pyciannacounter
-Simple webapp to save and report worked hours
+# contacalorie
+A simple web app to compute and report the bill subdivision for a specific condo heating system
