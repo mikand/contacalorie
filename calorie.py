@@ -1,10 +1,42 @@
-from dataclasses import dataclass
-import os.path
-import gspread
+from sqlalchemy import create_engine, Column, String, Float, Date
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+import datetime
 
-from oauth2client.service_account import ServiceAccountCredentials
+Base = declarative_base()
 
-def get_data():
+class Datum(Base):
+    __tablename__ = 'data'
+
+    id = Column(String, primary_key=True)  # Assuming data is unique, or use an auto id
+    data = Column(Date)
+    gas_generale = Column(Float)
+    gas_pp = Column(Float)
+    gas_sp = Column(Float)
+    gas_tp = Column(Float)
+    calorie_pp_zona_giorno = Column(Float)
+    calorie_pp_zona_notte = Column(Float)
+    calorie_sp = Column(Float)
+    calorie_tc = Column(Float)
+    calorie_tp = Column(Float)
+    calorie_h2o_calda = Column(Float)
+    h2o_calda_andata_pp = Column(Float)
+    h2o_calda_ricircolo_pp = Column(Float)
+    h2o_calda_andata_sp = Column(Float)
+    h2o_calda_ricircolo_sp = Column(Float)
+    h2o_calda_andata_tp = Column(Float)
+    h2o_calda_ricircolo_tp = Column(Float)
+    costo_bolletta = Column(Float)
+
+engine = create_engine('sqlite:///contacalorie.db')
+Base.metadata.create_all(engine)
+Session = sessionmaker(bind=engine)
+
+def populate_from_sheets():
+    import os.path
+    import gspread
+    from oauth2client.service_account import ServiceAccountCredentials
+
     # use creds to create a client to interact with the Google Drive API
     scope = ['https://spreadsheets.google.com/feeds',
              'https://www.googleapis.com/auth/drive']
@@ -12,61 +44,50 @@ def get_data():
     client = gspread.authorize(creds)
 
     # Find a workbook by name and open the first sheet
-    # Make sure you use the right name here.
     sheet = client.open("DBContacalorieMaiano").sheet1
 
-    # Extract and print all of the values
+    # Extract all records
     list_of_hashes = sheet.get_all_records()
-    res = []
+
+    session = Session()
     for d in list_of_hashes:
-        datum = Datum.from_dict(d)
-        res.append(datum)
-    print(res)
-    return res
+        datum = Datum(
+            id=d['Data di rilevamento'],  # Assuming data is unique
+            data=datetime.datetime.strptime(d['Data di rilevamento'], '%m/%d/%Y').date(),
+            gas_generale=d['Contatore gas generale'],
+            gas_pp=d['Contatore gas primo piano'],
+            gas_sp=d['Contatore gas secondo piano'],
+            gas_tp=d['Contatore gas terzo piano'],
+            calorie_pp_zona_giorno=d['Contatore calorie primo piano zona giorno'],
+            calorie_pp_zona_notte=d['Contatore calorie primo piano zona notte'],
+            calorie_sp=d['Contatore calorie secondo piano'],
+            calorie_tc=d['Contatore calorie taverna carlo'],
+            calorie_tp=d['Contatore calorie terzo piano'],
+            calorie_h2o_calda=d['Contatore calorie acqua calda'],
+            h2o_calda_andata_pp=d['Contatore H2O calda andata primo piano'],
+            h2o_calda_ricircolo_pp=d['Contatore H2O ricircolo primo piano'],
+            h2o_calda_andata_sp=d['Contatore H2O calda andata secondo piano'],
+            h2o_calda_ricircolo_sp=d['Contatore H2O ricircolo secondo piano'],
+            h2o_calda_andata_tp=d['Contatore H2O calda andata terzo piano'],
+            h2o_calda_ricircolo_tp=d['Contatore H2O ricircolo terzo piano'],
+            costo_bolletta=d['Costo totale bolletta gas']
+        )
+        session.add(datum)
+    session.commit()
+    session.close()
+    print("Data populated from Google Sheets.")
 
-@dataclass(eq=True)
-class Datum(object):
-    data = None
-    gas_generale = None
-    gas_pp = None
-    gas_sp = None
-    gas_tp = None
-    calorie_pp_zona_giorno = None
-    calorie_pp_zona_notte = None
-    calorie_sp = None
-    calorie_tc = None
-    calorie_tp = None
-    calorie_h2o_calda = None
-    h2o_calda_andata_pp = None
-    h2o_calda_ricircolo_pp = None
-    h2o_calda_andata_sp = None
-    h2o_calda_ricircolo_sp = None
-    h2o_calda_andata_tp = None
-    h2o_calda_ricircolo_tp = None
-    costo_bolletta = None
+def get_data():
+    session = Session()
+    data = session.query(Datum).order_by(Datum.data).all()
+    session.close()
+    return data
 
-    @staticmethod
-    def from_dict(d):
-        r = Datum()
-        r.data = d['Data di rilevamento']
-        r.gas_generale = d['Contatore gas generale']
-        r.gas_pp = d['Contatore gas primo piano']
-        r.gas_sp = d['Contatore gas secondo piano']
-        r.gas_tp = d['Contatore gas terzo piano']
-        r.calorie_pp_zona_giorno = d['Contatore calorie primo piano zona giorno']
-        r.calorie_pp_zona_notte = d['Contatore calorie primo piano zona notte']
-        r.calorie_sp = d['Contatore calorie secondo piano']
-        r.calorie_tc = d['Contatore calorie taverna carlo']
-        r.calorie_tp = d['Contatore calorie terzo piano']
-        r.calorie_h2o_calda = d['Contatore calorie acqua calda']
-        r.h2o_calda_andata_pp = d['Contatore H2O calda andata primo piano']
-        r.h2o_calda_ricircolo_pp = d['Contatore H2O ricircolo primo piano']
-        r.h2o_calda_andata_sp = d['Contatore H2O calda andata secondo piano']
-        r.h2o_calda_ricircolo_sp = d['Contatore H2O ricircolo secondo piano']
-        r.h2o_calda_andata_tp = d['Contatore H2O calda andata terzo piano']
-        r.h2o_calda_ricircolo_tp = d['Contatore H2O ricircolo terzo piano']
-        r.costo_bolletta = d['Costo totale bolletta gas']
-        return r
+def format_date_italian(date_obj):
+    """Format date object as day/month/year (Italian style)"""
+    if date_obj is None:
+        return ""
+    return date_obj.strftime('%d/%m/%Y')
 
 class Ripartizione(object):
     def __init__(self, date=None, pp=None, sp=None, tp=None):
@@ -80,11 +101,11 @@ class Ripartizione(object):
 
     def __str__(self):
         return "PP: %s\nSP: %s\nTP: %s\n=========\nTOT: %s" % \
-            (self.pp, self.sp, self.mp, self.mg, self.totale())
+            (self.pp, self.sp, self.tp, self.totale())
 
 
 def partition(d1, d2):
-    date = (d1.data, d2.data)
+    date = (format_date_italian(d1.data), format_date_italian(d2.data))
     diff_gas_generale = d2.gas_generale - d1.gas_generale
 
     if diff_gas_generale == 0:

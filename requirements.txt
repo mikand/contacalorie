@@ -3,3 +3,4 @@ pypdf2
 reportlab
 gspread
 oauth2client
+sqlalchemy

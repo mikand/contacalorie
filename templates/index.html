@@ -8,12 +8,8 @@
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/js/bootstrap.min.js" integrity="sha384-alpBpkh1PFOepccYVYDB4do5UnbKysX5WZXm3XxPqe5iKTfUKjNkCk9SaVuEZflJ" crossorigin="anonymous"></script>
   </head>
   <body>
-    <div align="center" class="footer">
-      <br/>
-      <a class="btn btn-primary" href="https://docs.google.com/forms/d/e/1FAIpQLScuztBcsl1WvmNw3a0SJtt6sonMQzOfudCmRk8f8lUc7N0Lbw/viewform?usp=sf_link" target="blank">Vai alla pagina di inserimento dati</a>
-      <br/>
-      <br/>
-    </div>
+
+
 
     <div id="accordion" role="tablist">
       {% for r in rips %}
@@ -48,13 +44,305 @@
       {% endfor %}
     </div>
 
+    <hr/>
+    <h2 class="mt-5">Gestione Dati</h2>
+    <button class="btn btn-success mb-3" data-toggle="modal" data-target="#formModal" onclick="resetForm()">+ Aggiungi Nuovo Record</button>
+    
+    <div class="table-responsive">
+      <table class="table table-striped table-hover" id="dataTable">
+        <thead class="table-dark">
+          <tr>
+            <th>Data</th>
+            <th>Gas Generale</th>
+            <th>Gas PP</th>
+            <th>Gas SP</th>
+            <th>Gas TP</th>
+            <th>Calorie PP (Giorno)</th>
+            <th>Calorie PP (Notte)</th>
+            <th>Calorie SP</th>
+            <th>Calorie TC</th>
+            <th>Calorie TP</th>
+            <th>Calorie H2O</th>
+            <th>H2O Andata PP</th>
+            <th>H2O Ricircolo PP</th>
+            <th>H2O Andata SP</th>
+            <th>H2O Ricircolo SP</th>
+            <th>H2O Andata TP</th>
+            <th>H2O Ricircolo TP</th>
+            <th>Costo Bolletta</th>
+            <th>Azioni</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+        </tbody>
+      </table>
+    </div>
 
-
+    <!-- Modal for Add/Edit -->
+    <div class="modal fade" id="formModal" tabindex="-1" role="dialog" aria-labelledby="formModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="formModalLabel">Nuovo Record</h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            <form id="dataForm">
+              <input type="hidden" id="recordId" value="">
+              <div class="form-group">
+                <label for="data">Data *</label>
+                <input type="date" class="form-control" id="data" required>
+              </div>
+              <div class="form-row">
+                <div class="form-group col-md-6">
+                  <label for="gas_generale">Gas Generale *</label>
+                  <input type="number" step="0.01" class="form-control" id="gas_generale" required>
+                </div>
+                <div class="form-group col-md-6">
+                  <label for="gas_pp">Gas PP *</label>
+                  <input type="number" step="0.01" class="form-control" id="gas_pp" required>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group col-md-6">
+                  <label for="gas_sp">Gas SP *</label>
+                  <input type="number" step="0.01" class="form-control" id="gas_sp" required>
+                </div>
+                <div class="form-group col-md-6">
+                  <label for="gas_tp">Gas TP *</label>
+                  <input type="number" step="0.01" class="form-control" id="gas_tp" required>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group col-md-6">
+                  <label for="calorie_pp_zona_giorno">Calorie PP Giorno *</label>
+                  <input type="number" step="0.01" class="form-control" id="calorie_pp_zona_giorno" required>
+                </div>
+                <div class="form-group col-md-6">
+                  <label for="calorie_pp_zona_notte">Calorie PP Notte *</label>
+                  <input type="number" step="0.01" class="form-control" id="calorie_pp_zona_notte" required>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group col-md-6">
+                  <label for="calorie_sp">Calorie SP *</label>
+                  <input type="number" step="0.01" class="form-control" id="calorie_sp" required>
+                </div>
+                <div class="form-group col-md-6">
+                  <label for="calorie_tc">Calorie TC *</label>
+                  <input type="number" step="0.01" class="form-control" id="calorie_tc" required>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group col-md-6">
+                  <label for="calorie_tp">Calorie TP *</label>
+                  <input type="number" step="0.01" class="form-control" id="calorie_tp" required>
+                </div>
+                <div class="form-group col-md-6">
+                  <label for="calorie_h2o_calda">Calorie H2O Calda *</label>
+                  <input type="number" step="0.01" class="form-control" id="calorie_h2o_calda" required>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group col-md-6">
+                  <label for="h2o_calda_andata_pp">H2O Andata PP *</label>
+                  <input type="number" step="0.01" class="form-control" id="h2o_calda_andata_pp" required>
+                </div>
+                <div class="form-group col-md-6">
+                  <label for="h2o_calda_ricircolo_pp">H2O Ricircolo PP *</label>
+                  <input type="number" step="0.01" class="form-control" id="h2o_calda_ricircolo_pp" required>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group col-md-6">
+                  <label for="h2o_calda_andata_sp">H2O Andata SP *</label>
+                  <input type="number" step="0.01" class="form-control" id="h2o_calda_andata_sp" required>
+                </div>
+                <div class="form-group col-md-6">
+                  <label for="h2o_calda_ricircolo_sp">H2O Ricircolo SP *</label>
+                  <input type="number" step="0.01" class="form-control" id="h2o_calda_ricircolo_sp" required>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group col-md-6">
+                  <label for="h2o_calda_andata_tp">H2O Andata TP *</label>
+                  <input type="number" step="0.01" class="form-control" id="h2o_calda_andata_tp" required>
+                </div>
+                <div class="form-group col-md-6">
+                  <label for="h2o_calda_ricircolo_tp">H2O Ricircolo TP *</label>
+                  <input type="number" step="0.01" class="form-control" id="h2o_calda_ricircolo_tp" required>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="costo_bolletta">Costo Bolletta *</label>
+                <input type="number" step="0.01" class="form-control" id="costo_bolletta" required>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">Annulla</button>
+            <button type="button" class="btn btn-primary" onclick="saveRecord()">Salva</button>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <div align="center" class="footer">
       <br/>
       Copyright &copy; {{copyright_date}} Andrea Micheli
     </div>
 
-  </body>
-</html>
+    <script>
+      let currentEditId = null;
+
+      function loadData() {
+        fetch('/api/data')
+          .then(response => response.json())
+          .then(data => {
+            const tableBody = document.getElementById('tableBody');
+            tableBody.innerHTML = '';
+            data.forEach(row => {
+              const tr = document.createElement('tr');
+              tr.innerHTML = `
+                <td>${row.data}</td>
+                <td>${row.gas_generale}</td>
+                <td>${row.gas_pp}</td>
+                <td>${row.gas_sp}</td>
+                <td>${row.gas_tp}</td>
+                <td>${row.calorie_pp_zona_giorno}</td>
+                <td>${row.calorie_pp_zona_notte}</td>
+                <td>${row.calorie_sp}</td>
+                <td>${row.calorie_tc}</td>
+                <td>${row.calorie_tp}</td>
+                <td>${row.calorie_h2o_calda}</td>
+                <td>${row.h2o_calda_andata_pp}</td>
+                <td>${row.h2o_calda_ricircolo_pp}</td>
+                <td>${row.h2o_calda_andata_sp}</td>
+                <td>${row.h2o_calda_ricircolo_sp}</td>
+                <td>${row.h2o_calda_andata_tp}</td>
+                <td>${row.h2o_calda_ricircolo_tp}</td>
+                <td>${row.costo_bolletta}</td>
+                <td>
+                  <button class="btn btn-sm btn-warning" onclick="editRecord('${row.id}')">Modifica</button>
+                  <button class="btn btn-sm btn-danger" onclick="deleteRecord('${row.id}')">Elimina</button>
+                </td>
+              `;
+              tableBody.appendChild(tr);
+            });
+          })
+          .catch(error => console.error('Error loading data:', error));
+      }
+
+      function resetForm() {
+        currentEditId = null;
+        document.getElementById('formModalLabel').textContent = 'Nuovo Record';
+        document.getElementById('dataForm').reset();
+        document.getElementById('recordId').value = '';
+      }
+
+      function editRecord(id) {
+        currentEditId = id;
+        fetch(`/api/data/${id}`)
+          .then(response => response.json())
+          .then(row => {
+            document.getElementById('formModalLabel').textContent = 'Modifica Record';
+            document.getElementById('recordId').value = id;
+            document.getElementById('data').value = row.data;
+            document.getElementById('gas_generale').value = row.gas_generale;
+            document.getElementById('gas_pp').value = row.gas_pp;
+            document.getElementById('gas_sp').value = row.gas_sp;
+            document.getElementById('gas_tp').value = row.gas_tp;
+            document.getElementById('calorie_pp_zona_giorno').value = row.calorie_pp_zona_giorno;
+            document.getElementById('calorie_pp_zona_notte').value = row.calorie_pp_zona_notte;
+            document.getElementById('calorie_sp').value = row.calorie_sp;
+            document.getElementById('calorie_tc').value = row.calorie_tc;
+            document.getElementById('calorie_tp').value = row.calorie_tp;
+            document.getElementById('calorie_h2o_calda').value = row.calorie_h2o_calda;
+            document.getElementById('h2o_calda_andata_pp').value = row.h2o_calda_andata_pp;
+            document.getElementById('h2o_calda_ricircolo_pp').value = row.h2o_calda_ricircolo_pp;
+            document.getElementById('h2o_calda_andata_sp').value = row.h2o_calda_andata_sp;
+            document.getElementById('h2o_calda_ricircolo_sp').value = row.h2o_calda_ricircolo_sp;
+            document.getElementById('h2o_calda_andata_tp').value = row.h2o_calda_andata_tp;
+            document.getElementById('h2o_calda_ricircolo_tp').value = row.h2o_calda_ricircolo_tp;
+            document.getElementById('costo_bolletta').value = row.costo_bolletta;
+            $('#formModal').modal('show');
+          })
+          .catch(error => console.error('Error loading record:', error));
+      }
+
+      function saveRecord() {
+        const form = document.getElementById('dataForm');
+        if (!form.checkValidity()) {
+          form.reportValidity();
+          return;
+        }
+
+        const data = {
+          data: document.getElementById('data').value,
+          gas_generale: parseFloat(document.getElementById('gas_generale').value),
+          gas_pp: parseFloat(document.getElementById('gas_pp').value),
+          gas_sp: parseFloat(document.getElementById('gas_sp').value),
+          gas_tp: parseFloat(document.getElementById('gas_tp').value),
+          calorie_pp_zona_giorno: parseFloat(document.getElementById('calorie_pp_zona_giorno').value),
+          calorie_pp_zona_notte: parseFloat(document.getElementById('calorie_pp_zona_notte').value),
+          calorie_sp: parseFloat(document.getElementById('calorie_sp').value),
+          calorie_tc: parseFloat(document.getElementById('calorie_tc').value),
+          calorie_tp: parseFloat(document.getElementById('calorie_tp').value),
+          calorie_h2o_calda: parseFloat(document.getElementById('calorie_h2o_calda').value),
+          h2o_calda_andata_pp: parseFloat(document.getElementById('h2o_calda_andata_pp').value),
+          h2o_calda_ricircolo_pp: parseFloat(document.getElementById('h2o_calda_ricircolo_pp').value),
+          h2o_calda_andata_sp: parseFloat(document.getElementById('h2o_calda_andata_sp').value),
+          h2o_calda_ricircolo_sp: parseFloat(document.getElementById('h2o_calda_ricircolo_sp').value),
+          h2o_calda_andata_tp: parseFloat(document.getElementById('h2o_calda_andata_tp').value),
+          h2o_calda_ricircolo_tp: parseFloat(document.getElementById('h2o_calda_ricircolo_tp').value),
+          costo_bolletta: parseFloat(document.getElementById('costo_bolletta').value)
+        };
+
+        const method = currentEditId ? 'PUT' : 'POST';
+        const url = currentEditId ? `/api/data/${currentEditId}` : '/api/data';
+
+        fetch(url, {
+          method: method,
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(data)
+        })
+          .then(response => {
+            if (response.ok) {
+              $('#formModal').modal('hide');
+              loadData();
+              alert('Record salvato con successo!');
+            } else {
+              alert('Errore nel salvataggio del record');
+            }
+          })
+          .catch(error => {
+            console.error('Error:', error);
+            alert('Errore nel salvataggio del record');
+          });
+      }
+
+      function deleteRecord(id) {
+        if (confirm('Sei sicuro di voler eliminare questo record?')) {
+          fetch(`/api/data/${id}`, { method: 'DELETE' })
+            .then(response => {
+              if (response.ok) {
+                loadData();
+                alert('Record eliminato con successo!');
+              } else {
+                alert('Errore nell\'eliminazione del record');
+              }
+            })
+            .catch(error => {
+              console.error('Error:', error);
+              alert('Errore nell\'eliminazione del record');
+            });
+        }
+      }
+
+      // Load data when page loads
+      document.addEventListener('DOMContentLoaded', loadData);
+    </script>
