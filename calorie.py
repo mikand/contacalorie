@@ -90,11 +90,15 @@ def format_date_italian(date_obj):
     return date_obj.strftime('%d/%m/%Y')
 
 class Ripartizione(object):
-    def __init__(self, date=None, pp=None, sp=None, tp=None):
+    def __init__(self, date=None, pp=None, sp=None, tp=None, error=None):
         self.date = date
         self.pp = pp
         self.sp = sp
         self.tp = tp
+        self.error = error
+
+    def is_error(self):
+        return self.error is not None
 
     def totale(self):
         return self.pp + self.sp + self.tp
@@ -104,44 +108,50 @@ class Ripartizione(object):
             (self.pp, self.sp, self.tp, self.totale())
 
 
-def partition(d1, d2):
+def partition(d1, d2) -> Ripartizione:
     date = (format_date_italian(d1.data), format_date_italian(d2.data))
-    diff_gas_generale = d2.gas_generale - d1.gas_generale
+    try:
+        diff_gas_generale = d2.gas_generale - d1.gas_generale
 
-    if diff_gas_generale == 0:
-        return Ripartizione(date, 0,0,0,0)
+        if diff_gas_generale == 0:
+            return Ripartizione(date, 0,0,0,0)
 
-    diff_gas_pp = d2.gas_pp - d1.gas_pp
-    diff_gas_sp = d2.gas_sp - d1.gas_sp
-    diff_gas_tp = d2.gas_tp - d1.gas_tp
+        diff_gas_pp = d2.gas_pp - d1.gas_pp
+        diff_gas_sp = d2.gas_sp - d1.gas_sp
+        diff_gas_tp = d2.gas_tp - d1.gas_tp
 
-    euro_per_mc = d2.costo_bolletta / diff_gas_generale
-    gas_h2o_calda = diff_gas_generale - diff_gas_tp - diff_gas_sp - diff_gas_pp
-    costo_h2o_calda = euro_per_mc * gas_h2o_calda
+        euro_per_mc = d2.costo_bolletta / diff_gas_generale
+        gas_h2o_calda = diff_gas_generale - diff_gas_tp - diff_gas_sp - diff_gas_pp
+        costo_h2o_calda = euro_per_mc * gas_h2o_calda
 
-    diff_calorie_pp_zona_giorno = d2.calorie_pp_zona_giorno - d1.calorie_pp_zona_giorno
-    diff_calorie_pp_zona_notte = d2.calorie_pp_zona_notte - d1.calorie_pp_zona_notte
-    diff_calorie_pp = diff_calorie_pp_zona_giorno + diff_calorie_pp_zona_notte
-    diff_calorie_sp = d2.calorie_sp - d1.calorie_sp
-    diff_calorie_tc = d2.calorie_tc - d1.calorie_tc
-    diff_calorie_tp = d2.calorie_tp - d1.calorie_tp
+        diff_calorie_pp_zona_giorno = d2.calorie_pp_zona_giorno - d1.calorie_pp_zona_giorno
+        diff_calorie_pp_zona_notte = d2.calorie_pp_zona_notte - d1.calorie_pp_zona_notte
+        diff_calorie_pp = diff_calorie_pp_zona_giorno + diff_calorie_pp_zona_notte
+        diff_calorie_sp = d2.calorie_sp - d1.calorie_sp
+        diff_calorie_tc = d2.calorie_tc - d1.calorie_tc
+        diff_calorie_tp = d2.calorie_tp - d1.calorie_tp
 
-    totale_calorie_riscaldamento = diff_calorie_pp + diff_calorie_sp + diff_calorie_tc + diff_calorie_tp
-    diff_calorie_h2o_calda = d2.calorie_h2o_calda - d1.calorie_h2o_calda
+        totale_calorie_riscaldamento = diff_calorie_pp + diff_calorie_sp + diff_calorie_tc + diff_calorie_tp
+        diff_calorie_h2o_calda = d2.calorie_h2o_calda - d1.calorie_h2o_calda
 
-    consumo_h2o_pp = (d2.h2o_calda_andata_pp - d1.h2o_calda_andata_pp) - (d2.h2o_calda_ricircolo_pp - d1.h2o_calda_ricircolo_pp)
-    consumo_h2o_sp = (d2.h2o_calda_andata_sp - d1.h2o_calda_andata_sp) - (d2.h2o_calda_ricircolo_sp - d1.h2o_calda_ricircolo_sp)
-    consumo_h2o_tp = (d2.h2o_calda_andata_tp - d1.h2o_calda_andata_tp) - (d2.h2o_calda_ricircolo_tp - d1.h2o_calda_ricircolo_tp)
-    consumo_totale_h2o = consumo_h2o_pp + consumo_h2o_sp + consumo_h2o_tp
+        consumo_h2o_pp = (d2.h2o_calda_andata_pp - d1.h2o_calda_andata_pp) - (d2.h2o_calda_ricircolo_pp - d1.h2o_calda_ricircolo_pp)
+        consumo_h2o_sp = (d2.h2o_calda_andata_sp - d1.h2o_calda_andata_sp) - (d2.h2o_calda_ricircolo_sp - d1.h2o_calda_ricircolo_sp)
+        consumo_h2o_tp = (d2.h2o_calda_andata_tp - d1.h2o_calda_andata_tp) - (d2.h2o_calda_ricircolo_tp - d1.h2o_calda_ricircolo_tp)
+        consumo_totale_h2o = consumo_h2o_pp + consumo_h2o_sp + consumo_h2o_tp
 
-    ripartizione_pp = diff_calorie_pp + (diff_calorie_h2o_calda / consumo_totale_h2o) * consumo_h2o_pp
-    ripartizione_sp = diff_calorie_sp + (diff_calorie_h2o_calda / consumo_totale_h2o) * consumo_h2o_sp
-    ripartizione_tp = (diff_calorie_tc + diff_calorie_tp) + (diff_calorie_h2o_calda / consumo_totale_h2o) * consumo_h2o_tp
+        ripartizione_pp = diff_calorie_pp + (diff_calorie_h2o_calda / consumo_totale_h2o) * consumo_h2o_pp
+        ripartizione_sp = diff_calorie_sp + (diff_calorie_h2o_calda / consumo_totale_h2o) * consumo_h2o_sp
+        ripartizione_tp = (diff_calorie_tc + diff_calorie_tp) + (diff_calorie_h2o_calda / consumo_totale_h2o) * consumo_h2o_tp
 
-    res = Ripartizione()
-    res.date = date
-    res.pp = euro_per_mc * diff_gas_pp + costo_h2o_calda / (totale_calorie_riscaldamento + diff_calorie_h2o_calda) * ripartizione_pp
-    res.sp = euro_per_mc * diff_gas_sp + costo_h2o_calda / (totale_calorie_riscaldamento + diff_calorie_h2o_calda) * ripartizione_sp
-    res.tp = euro_per_mc * diff_gas_tp + costo_h2o_calda / (totale_calorie_riscaldamento + diff_calorie_h2o_calda) * ripartizione_tp
+        res = Ripartizione()
+        res.date = date
+        res.pp = euro_per_mc * diff_gas_pp + costo_h2o_calda / (totale_calorie_riscaldamento + diff_calorie_h2o_calda) * ripartizione_pp
+        res.sp = euro_per_mc * diff_gas_sp + costo_h2o_calda / (totale_calorie_riscaldamento + diff_calorie_h2o_calda) * ripartizione_sp
+        res.tp = euro_per_mc * diff_gas_tp + costo_h2o_calda / (totale_calorie_riscaldamento + diff_calorie_h2o_calda) * ripartizione_tp
 
-    return res
+        return res
+    except Exception as e:
+        res = Ripartizione()
+        res.date = date
+        res.error = str(e)
+        return res

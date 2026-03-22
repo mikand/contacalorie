@@ -3,14 +3,16 @@
   <head>
     <title>Contacalorie Maiano</title>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/css/bootstrap.min.css" integrity="sha384-PsH8R72JQ3SOdhVi3uxftmaW6Vc51MKb0q5P2rRUpPvrszuE4W1povHYgTpBfshb" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.3/umd/popper.min.js" integrity="sha384-vFJXuSJphROIrBnz7yo7oB41mKfc8JzQZiCq4NCceLEaO4IHwicKwpJf9c9IpFgh" crossorigin="anonymous"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/js/bootstrap.min.js" integrity="sha384-alpBpkh1PFOepccYVYDB4do5UnbKysX5WZXm3XxPqe5iKTfUKjNkCk9SaVuEZflJ" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
   </head>
   <body>
 
 
-
+    <h2 class="mt-5">Ripartizioni</h2>
     <div id="accordion" role="tablist">
       {% for r in rips %}
       <div class="card">
@@ -22,53 +24,59 @@
           </h5>
         </div>
 
+        {% if r.is_error() %}
+          <div class="alert alert-danger" role="alert">
+            Errore nel calcolo della ripartizione: {{r.error}}
+          </div>
+        {% else %}
         <div id="collapse{{loop.index}}" class="collapse{{' show' if loop.index == 1 else ''}}" role="tabpanel" aria-labelledby="heading{{loop.index}}" data-parent="#accordion">
           <div class="card-body">
             <p>
               <h3>Primo Piano: {{r.pp | round(2)}} &euro;</h3>
-                  <a class="btn btn-primary" href="{{ url_for('report', data1=r.date[0].replace('/','-'), data2=r.date[1].replace('/','-'), costo=r.pp, appartamento='Primo Piano') }}" target="blank">Scarica Prospetto</a>
+              <a class="btn btn-primary" href="{{ url_for('report', data1=r.date[0].replace('/','-'), data2=r.date[1].replace('/','-'), costo=r.pp, appartamento='Primo Piano') }}" target="blank">Scarica Prospetto</a>
             </p>
             <p>
               <h3>Secondo Piano: {{r.sp | round(2)}} &euro;</h3>
-                  <a class="btn btn-primary" href="{{ url_for('report', data1=r.date[0].replace('/','-'), data2=r.date[1].replace('/','-'), costo=r.sp, appartamento='Secondo Piano') }}" target="blank">Scarica Prospetto</a>
+              <a class="btn btn-primary" href="{{ url_for('report', data1=r.date[0].replace('/','-'), data2=r.date[1].replace('/','-'), costo=r.sp, appartamento='Secondo Piano') }}" target="blank">Scarica Prospetto</a>
             </p>
             <p>
               <h3>Terzo Piano: {{r.tp | round(2)}} &euro;</h3>
-                  <a class="btn btn-primary" href="{{ url_for('report', data1=r.date[0].replace('/','-'), data2=r.date[1].replace('/','-'), costo=r.tp, appartamento='Terzo Piano') }}" target="blank">Scarica Prospetto</a>
+              <a class="btn btn-primary" href="{{ url_for('report', data1=r.date[0].replace('/','-'), data2=r.date[1].replace('/','-'), costo=r.tp, appartamento='Terzo Piano') }}" target="blank">Scarica Prospetto</a>
             </p>
             <br/>
             <h3>Totale: {{r.totale() | round(2)}} &euro;</h3>
           </div>
         </div>
       </div>
+      {% endif %}
       {% endfor %}
     </div>
 
     <hr/>
     <h2 class="mt-5">Gestione Dati</h2>
-    <button class="btn btn-success mb-3" data-toggle="modal" data-target="#formModal" onclick="resetForm()">+ Aggiungi Nuovo Record</button>
-    
+    <button class="btn btn-success mb-3" data-toggle="modal" data-target="#formModal" onclick="resetForm()">+ Aggiungi Nuovo Rilevamento</button>
+
     <div class="table-responsive">
       <table class="table table-striped table-hover" id="dataTable">
         <thead class="table-dark">
           <tr>
             <th>Data</th>
-            <th>Gas Generale</th>
-            <th>Gas PP</th>
-            <th>Gas SP</th>
-            <th>Gas TP</th>
-            <th>Calorie PP (Giorno)</th>
-            <th>Calorie PP (Notte)</th>
-            <th>Calorie SP</th>
-            <th>Calorie TC</th>
-            <th>Calorie TP</th>
-            <th>Calorie H2O</th>
-            <th>H2O Andata PP</th>
-            <th>H2O Ricircolo PP</th>
-            <th>H2O Andata SP</th>
-            <th>H2O Ricircolo SP</th>
-            <th>H2O Andata TP</th>
-            <th>H2O Ricircolo TP</th>
+            <th>Gas<br />Generale</th>
+            <th>Gas<br />Primo Piano</th>
+            <th>Gas<br />Secondo Piano</th>
+            <th>Gas<br />Terzo Piano</th>
+            <th>Calorie<br />Primo Piano<br>Zona Giorno</th>
+            <th>Calorie<br />Primo Piano<br>Zona Notte</th>
+            <th>Calorie<br />Secondo Piano</th>
+            <th>Calorie<br />Taverna<br />Carlo</th>
+            <th>Calorie<br />Terzo Piano</th>
+            <th>Calorie<br />H2O</th>
+            <th>H2O Andata<br />Primo Piano</th>
+            <th>H2O Ricircolo<br />Primo Piano</th>
+            <th>H2O Andata<br />Secondo Piano</th>
+            <th>H2O Ricircolo<br />Secondo Piano</th>
+            <th>H2O Andata<br />Terzo Piano</th>
+            <th>H2O Ricircolo<br />Terzo Piano</th>
             <th>Costo Bolletta</th>
             <th>Azioni</th>
           </tr>
@@ -83,7 +91,7 @@
       <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
           <div class="modal-header">
-            <h5 class="modal-title" id="formModalLabel">Nuovo Record</h5>
+            <h5 class="modal-title" id="formModalLabel">Nuovo Rilevamento</h5>
             <button type="button" class="close" data-dismiss="modal" aria-label="Close">
               <span aria-hidden="true">&times;</span>
             </button>
@@ -93,7 +101,7 @@
               <input type="hidden" id="recordId" value="">
               <div class="form-group">
                 <label for="data">Data *</label>
-                <input type="date" class="form-control" id="data" required>
+                <input type="text" class="form-control" id="data" required>
               </div>
               <div class="form-row">
                 <div class="form-group col-md-6">
@@ -201,6 +209,12 @@
         fetch('/api/data')
           .then(response => response.json())
           .then(data => {
+            // Sort data by date in descending order (most recent first)
+            data.sort((a, b) => {
+              const dateA = new Date(a.data.split('/').reverse().join('-'));
+              const dateB = new Date(b.data.split('/').reverse().join('-'));
+              return dateB - dateA;
+            });
             const tableBody = document.getElementById('tableBody');
             tableBody.innerHTML = '';
             data.forEach(row => {
@@ -232,7 +246,7 @@
               tableBody.appendChild(tr);
             });
           })
-          .catch(error => console.error('Error loading data:', error));
+          .catch(error => console.error('Error loading data:', error.message || error));
       }
 
       function resetForm() {
@@ -240,14 +254,49 @@
         document.getElementById('formModalLabel').textContent = 'Nuovo Record';
         document.getElementById('dataForm').reset();
         document.getElementById('recordId').value = '';
+
+        // Prefill new form with latest row (most recent data) excluding 'data' and 'costo_bolletta'
+        fetch('/api/data')
+          .then(response => response.json())
+          .then(data => {
+            if (!Array.isArray(data) || data.length === 0) {
+              return;
+            }
+            data.sort((a, b) => {
+              const da = new Date(a.data.split('/').reverse().join('-'));
+              const db = new Date(b.data.split('/').reverse().join('-'));
+              return db - da;
+            });
+            const latest = data[0];
+            document.getElementById('gas_generale').value = latest.gas_generale;
+            document.getElementById('gas_pp').value = latest.gas_pp;
+            document.getElementById('gas_sp').value = latest.gas_sp;
+            document.getElementById('gas_tp').value = latest.gas_tp;
+            document.getElementById('calorie_pp_zona_giorno').value = latest.calorie_pp_zona_giorno;
+            document.getElementById('calorie_pp_zona_notte').value = latest.calorie_pp_zona_notte;
+            document.getElementById('calorie_sp').value = latest.calorie_sp;
+            document.getElementById('calorie_tc').value = latest.calorie_tc;
+            document.getElementById('calorie_tp').value = latest.calorie_tp;
+            document.getElementById('calorie_h2o_calda').value = latest.calorie_h2o_calda;
+            document.getElementById('h2o_calda_andata_pp').value = latest.h2o_calda_andata_pp;
+            document.getElementById('h2o_calda_ricircolo_pp').value = latest.h2o_calda_ricircolo_pp;
+            document.getElementById('h2o_calda_andata_sp').value = latest.h2o_calda_andata_sp;
+            document.getElementById('h2o_calda_ricircolo_sp').value = latest.h2o_calda_ricircolo_sp;
+            document.getElementById('h2o_calda_andata_tp').value = latest.h2o_calda_andata_tp;
+            document.getElementById('h2o_calda_ricircolo_tp').value = latest.h2o_calda_ricircolo_tp;
+            // data and costo_bolletta remain empty for new entry
+            document.getElementById('data').value = '';
+            document.getElementById('costo_bolletta').value = '';
+          })
+          .catch(error => console.error('Error pre-filling form:', error.message || error));
       }
 
       function editRecord(id) {
         currentEditId = id;
-        fetch(`/api/data/${id}`)
+        fetch(`/api/data/${encodeURIComponent(id)}`)
           .then(response => response.json())
           .then(row => {
-            document.getElementById('formModalLabel').textContent = 'Modifica Record';
+            document.getElementById('formModalLabel').textContent = 'Modifica Rilevamento';
             document.getElementById('recordId').value = id;
             document.getElementById('data').value = row.data;
             document.getElementById('gas_generale').value = row.gas_generale;
@@ -269,7 +318,7 @@
             document.getElementById('costo_bolletta').value = row.costo_bolletta;
             $('#formModal').modal('show');
           })
-          .catch(error => console.error('Error loading record:', error));
+          .catch(error => console.error('Error loading record:', error.message || error));
       }
 
       function saveRecord() {
@@ -301,7 +350,7 @@
         };
 
         const method = currentEditId ? 'PUT' : 'POST';
-        const url = currentEditId ? `/api/data/${currentEditId}` : '/api/data';
+        const url = currentEditId ? `/api/data/${encodeURIComponent(currentEditId)}` : '/api/data';
 
         fetch(url, {
           method: method,
@@ -313,36 +362,47 @@
           .then(response => {
             if (response.ok) {
               $('#formModal').modal('hide');
-              loadData();
               alert('Record salvato con successo!');
+              location.reload();
             } else {
-              alert('Errore nel salvataggio del record');
+              response.json().then(data => {
+                alert('Errore nel salvataggio del record: ' + (data.error || 'Errore sconosciuto'));
+              }).catch(() => {
+                alert('Errore nel salvataggio del record: Errore nella risposta del server');
+              });
             }
           })
           .catch(error => {
             console.error('Error:', error);
-            alert('Errore nel salvataggio del record');
+            alert('Errore nel salvataggio del record: ' + error.message);
           });
       }
 
       function deleteRecord(id) {
         if (confirm('Sei sicuro di voler eliminare questo record?')) {
-          fetch(`/api/data/${id}`, { method: 'DELETE' })
+          fetch(`/api/data/${encodeURIComponent(id)}`, { method: 'DELETE' })
             .then(response => {
               if (response.ok) {
-                loadData();
                 alert('Record eliminato con successo!');
+                location.reload();
               } else {
-                alert('Errore nell\'eliminazione del record');
+                response.json().then(data => {
+                  alert('Errore nell\'eliminazione del record: ' + (data.error || 'Errore sconosciuto'));
+                }).catch(() => {
+                  alert('Errore nell\'eliminazione del record: Errore nella risposta del server');
+                });
               }
             })
             .catch(error => {
               console.error('Error:', error);
-              alert('Errore nell\'eliminazione del record');
+              alert('Errore nell\'eliminazione del record: ' + error.message);
             });
         }
       }
 
       // Load data when page loads
-      document.addEventListener('DOMContentLoaded', loadData);
+      document.addEventListener('DOMContentLoaded', function() {
+        loadData();
+        flatpickr("#data", { dateFormat: "d/m/Y" });
+      });
     </script>
