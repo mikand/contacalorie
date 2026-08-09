@@ -6,7 +6,7 @@ from flask import Flask, render_template, send_file, jsonify, request
 from report import make_pdf_file
 from utils import requires_auth
 from calorie import (FIELDS, LABELS, Reading, Session, format_date_italian,
-                     get_readings, split_costs)
+                     get_readings, grouped_fields, split_costs)
 
 app = Flask(__name__)
 
@@ -53,6 +53,7 @@ def to_dict(reading):
 def index():
     return render_template('index.html',
                            fields=FIELDS,
+                           groups=grouped_fields(),
                            labels=LABELS,
                            copyright_date=datetime.date.today().year)
 
@@ -98,6 +99,9 @@ def api_cost_splits():
             'floor_2': split.floor_2,
             'floor_3': split.floor_3,
             'total': None if split.is_error() else split.total(),
+            # The bill the period was split from: the site shows it next to
+            # the total so a split that does not add up is visible at a glance.
+            'bill_cost': current.bill_cost,
         })
     splits.reverse()  # most recent period first
     return jsonify(splits)

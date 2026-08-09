@@ -55,6 +55,20 @@ LABELS = {
     'bill_cost': 'Costo Bolletta',
 }
 
+# The form is grouped the way the meters are walked, and the field prefix is
+# the group. A new meter joins its group by name alone; one with an unknown
+# prefix lands in a trailing "Altro" rather than vanishing from the form.
+FIELD_GROUPS = [('Gas', 'gas_'), ('Calorie', 'calories_'),
+                ('Acqua Calda', 'hot_water_'), ('Bolletta', 'bill_')]
+
+def grouped_fields():
+    """FIELDS as a list of (group name, fields), in FIELD_GROUPS order."""
+    groups = [(name, [f for f in FIELDS if f.startswith(prefix)])
+              for name, prefix in FIELD_GROUPS]
+    grouped = {f for _, fields in groups for f in fields}
+    other = [f for f in FIELDS if f not in grouped]
+    return [g for g in groups if g[1]] + ([('Altro', other)] if other else [])
+
 # The Sheet's own column headings, which are Italian and not ours to rename.
 SHEET_COLUMNS = {
     'gas_main': 'Contatore gas generale',
