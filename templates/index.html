@@ -14,6 +14,8 @@
       summary::marker { color: #adb5bd; }
       .meters { display: grid; grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr)); column-gap: 2rem; }
       .meters > div { display: flex; justify-content: space-between; border-bottom: 1px solid #f1f3f5; padding: .15rem 0; }
+      .formula { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: .85rem; line-height: 1.7; }
+      .formula .num { color: #0a58ca; }
     </style>
   </head>
   <body class="container py-4">
@@ -25,7 +27,12 @@
       <button class="btn btn-success" onclick="openCreate()">+ Nuovo Rilevamento</button>
     </header>
 
-    <h2 class="h6 text-uppercase text-muted">Ripartizione</h2>
+    <h2 class="h6 text-uppercase text-muted">
+      Ripartizione
+      <button type="button" class="btn btn-sm btn-outline-secondary rounded-circle lh-1 px-2 py-1 ms-1"
+              onclick="openHelp()" title="Come si calcola la ripartizione"
+              aria-label="Come si calcola la ripartizione">?</button>
+    </h2>
     <select id="periodPicker" class="form-select mb-3" onchange="showSplit()" aria-label="Periodo"></select>
     <div id="splitCard" class="card mb-5">
       <div class="card-body text-muted">Caricamento…</div>
@@ -78,6 +85,8 @@
       </div>
     </div>
 
+    {% include 'help.html' %}
+
     <footer class="text-center text-muted small mt-5">
       Copyright &copy; {{copyright_date}} Andrea Micheli
     </footer>
@@ -92,6 +101,7 @@
       let splits = [];           // every period, most recent first
       let currentEditDate = null;
       let formModal = null;
+      let helpModal = null;
 
       const italian = iso => iso.split('-').reverse().join('/');
       const euro = n => n.toLocaleString('it-IT', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' €';
@@ -161,6 +171,35 @@
               <span>Costo bolletta</span><span>${euro(s.bill_cost)} ${balanced ? '✓' : '✗'}</span>
             </div>
           </div>`;
+      }
+
+      // The dialog only formats: every number in it was computed by
+      // split_costs() and arrived in `steps`, so the explanation can never
+      // disagree with the bill it explains.
+      function openHelp() {
+        const s = splits[document.getElementById('periodPicker').value];
+        const note = document.getElementById('helpPeriod');
+        document.getElementById('helpDateStart').textContent = s ? italian(s.from) : '…';
+        document.getElementById('helpDateEnd').textContent = s ? italian(s.to) : '…';
+        if (s && s.steps) {
+          note.className = 'text-muted small';
+          note.textContent = `I numeri sono quelli del periodo dal ${italian(s.from)} al ${italian(s.to)}.`;
+        } else {
+          note.className = 'text-danger small';
+          note.textContent =
+            !s ? 'Nessun periodo disponibile: servono almeno due rilevamenti.'
+            : s.error ? `Periodo dal ${italian(s.from)} al ${italian(s.to)}: ${s.error}. I valori non sono disponibili.`
+            : `Nel periodo dal ${italian(s.from)} al ${italian(s.to)} il gas generale non è aumentato: non c'è nulla da ripartire.`;
+        }
+        document.querySelectorAll('#helpModal [data-v]').forEach(el => {
+          const value = s && s.steps &&
+            el.dataset.v.split('.').reduce((o, key) => o && o[key], s.steps);
+          const digits = Number(el.dataset.d ?? 2);
+          el.textContent = (value === null || value === undefined) ? '—'
+            : value.toLocaleString('it-IT', {minimumFractionDigits: digits, maximumFractionDigits: digits})
+              + (el.dataset.u ? ' ' + el.dataset.u : '');
+        });
+        helpModal.show();
       }
 
       function showAllRows() {
@@ -323,6 +362,7 @@
 
       document.addEventListener('DOMContentLoaded', () => {
         formModal = new bootstrap.Modal(document.getElementById('formModal'));
+        helpModal = new bootstrap.Modal(document.getElementById('helpModal'));
         document.getElementById('dataForm').addEventListener('input',
           e => e.target.classList.remove('untouched'));
         refresh();

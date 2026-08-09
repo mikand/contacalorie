@@ -70,6 +70,54 @@ def test_no_water_use_is_an_error():
     assert s.period == (JANUARY.date, no_water.date)
 
 
+def test_steps_reproduce_the_split():
+    """The help dialog only prints `steps`, so every number it shows must
+    reconcile with the money actually billed. If this fails, the explanation
+    on screen is lying about the bill next to it."""
+    s = split_costs(JANUARY, FEBRUARY)
+    steps = s.steps
+    for floor in ('floor_1', 'floor_2', 'floor_3'):
+        part = steps[floor]
+        assert abs(part['gas_cost'] + part['common_cost'] - part['total']) < 1e-9, floor
+        assert abs(part['total'] - getattr(s, floor)) < 1e-9, floor
+    # The shares are a partition of the divisor, which is what makes the
+    # common cost close on itself rather than leaking money.
+    shares = sum(steps[f]['share'] for f in ('floor_1', 'floor_2', 'floor_3'))
+    assert abs(shares - steps['shares_total']) < 1e-6, shares
+    assert abs(steps['euro_per_m3'] * steps['gas_common'] - steps['cost_common']) < 1e-9
+
+
+def test_no_steps_when_there_is_nothing_to_explain():
+    """The dialog shows dashes rather than invented numbers, so `steps` must
+    be absent exactly when the period produced no calculation."""
+    assert split_costs(JANUARY, JANUARY).steps is None   # no gas burned
+    no_water = Reading(**{c.name: getattr(JANUARY, c.name)
+                          for c in Reading.__table__.columns})
+    no_water.date = datetime.date(2026, 2, 28)
+    no_water.gas_main = JANUARY.gas_main + 10
+    assert split_costs(JANUARY, no_water).steps is None   # divides by zero
+
+
+def test_help_dialog_asks_for_keys_that_exist():
+    """Every data-v in the help dialog is looked up in `steps` at runtime; a
+    typo would silently render as an em dash forever instead of failing."""
+    import re
+    from flask import render_template
+    from calorie import FIELDS, LABELS, grouped_fields
+    from website import app
+
+    with app.app_context():
+        html = render_template('index.html', fields=FIELDS, groups=grouped_fields(),
+                               labels=LABELS, copyright_date=2026)
+
+    steps = split_costs(JANUARY, FEBRUARY).steps
+    for path in sorted(set(re.findall(r'data-v="([^"]+)"', html))):
+        node = steps
+        for key in path.split('.'):
+            node = node.get(key) if isinstance(node, dict) else None
+        assert isinstance(node, float), path
+
+
 def test_period_holds_date_objects():
     """The API and the report both format the period themselves, so
     split_costs must hand back real dates rather than pre-formatted strings."""

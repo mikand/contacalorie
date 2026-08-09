@@ -102,6 +102,8 @@ def api_cost_splits():
             # The bill the period was split from: the site shows it next to
             # the total so a split that does not add up is visible at a glance.
             'bill_cost': current.bill_cost,
+            # Every intermediate of the calculation, for the help dialog.
+            'steps': split.steps,
         })
     splits.reverse()  # most recent period first
     return jsonify(splits)

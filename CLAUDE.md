@@ -52,13 +52,18 @@ utils.py         — requires_auth decorator; `python utils.py <user>` prints a 
 test_calorie.py  — asserts on split_costs(); run it directly
 templates/
   index.html     — Shell page; Bootstrap 4 + inline JS renders everything from the JSON API
+  help.html      — "?" dialog: SVG plant diagram and the split explained step by step
 ```
 
 The core logic lives in `calorie.py:split_costs()`. It takes two consecutive `Reading` rows (r1, r2) and splits costs proportionally:
 
-1. **Direct gas**: each floor pays `euro_per_m3 × its own gas diff`
-2. **Shared hot water cost** (`cost_hot_water`): allocated among floors weighted by net hot-water consumption (`supply − return` flow meters)
-3. **Heating calories** serve as the weighting factor within the hot-water cost split
+1. **Direct gas**: each floor pays `euro_per_m3 × its own gas diff`. The floor gas meters are sub-meters of `gas_main`.
+2. **Common gas** (`gas_common` = main − the three floor sub-meters) is what the central boiler burned, for heating *and* domestic hot water together. `cost_common` is its cost.
+3. **Shares**: the central `calories_hot_water` meter is handed to the floors in proportion to net hot-water use (`supply − return`); each floor's share is its own heating calories plus that allocation. `cost_common` splits in proportion to the shares.
+
+The three shares add up to `shares_total` by construction, which is why the split always closes exactly on the bill — that is the invariant `test_calorie.py` guards.
+
+`split_costs()` also fills `CostSplit.steps` with every intermediate it computed, including each floor's `gas_cost`/`common_cost`/`total`. `/api/cost-splits` passes it through and `help.html` only formats it, so the explanation shown to residents cannot drift from the money. `steps` is `None` exactly when there was nothing to compute (an error, or no gas burned), and the dialog then shows em dashes.
 
 `Reading.date` (a `Date`) is the primary key — one set of readings per day, with duplicates prevented by the database rather than by application checks. There is no separate id column.
 
@@ -92,7 +97,7 @@ All routes require Basic Auth.
 |--------|------|-------------|
 | GET | `/` | Page shell; the browser fills it from the JSON endpoints |
 | GET | `/report/<floor_1\|floor_2\|floor_3>/<d1>/<d2>` | PDF notice; the amount is recomputed server-side |
-| GET | `/api/cost-splits` | Computed periods, most recent first (`from`/`to`/`floor_*`/`total`) |
+| GET | `/api/cost-splits` | Computed periods, most recent first (`from`/`to`/`floor_*`/`total`/`bill_cost`/`steps`) |
 | GET | `/api/readings` | All records as JSON |
 | GET | `/api/readings/<date>` | Single record |
 | POST | `/api/readings` | Create record (409 if that date exists) |
