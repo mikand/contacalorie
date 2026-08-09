@@ -1,15 +1,16 @@
-from sqlalchemy import create_engine, Column, String, Float, Date
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
 import datetime
+
+from sqlalchemy import create_engine, Column, Float, Date
+from sqlalchemy.orm import declarative_base, sessionmaker
 
 Base = declarative_base()
 
 class Datum(Base):
     __tablename__ = 'data'
 
-    id = Column(String, primary_key=True)  # Assuming data is unique, or use an auto id
-    data = Column(Date)
+    # The date IS the record: one set of readings per day, uniqueness enforced
+    # by the database instead of by application checks.
+    data = Column(Date, primary_key=True)
     gas_generale = Column(Float)
     gas_pp = Column(Float)
     gas_sp = Column(Float)
@@ -28,11 +29,60 @@ class Datum(Base):
     h2o_calda_ricircolo_tp = Column(Float)
     costo_bolletta = Column(Float)
 
+# Every meter except the date, in column order. Adding a meter means adding a
+# column above and a label below; nothing else in the app lists the fields.
+FIELDS = [c.name for c in Datum.__table__.columns if c.name != 'data']
+
+LABELS = {
+    'gas_generale': 'Gas Generale',
+    'gas_pp': 'Gas Primo Piano',
+    'gas_sp': 'Gas Secondo Piano',
+    'gas_tp': 'Gas Terzo Piano',
+    'calorie_pp_zona_giorno': 'Calorie Primo Piano Zona Giorno',
+    'calorie_pp_zona_notte': 'Calorie Primo Piano Zona Notte',
+    'calorie_sp': 'Calorie Secondo Piano',
+    'calorie_tc': 'Calorie Taverna Carlo',
+    'calorie_tp': 'Calorie Terzo Piano',
+    'calorie_h2o_calda': 'Calorie H2O Calda',
+    'h2o_calda_andata_pp': 'H2O Andata Primo Piano',
+    'h2o_calda_ricircolo_pp': 'H2O Ricircolo Primo Piano',
+    'h2o_calda_andata_sp': 'H2O Andata Secondo Piano',
+    'h2o_calda_ricircolo_sp': 'H2O Ricircolo Secondo Piano',
+    'h2o_calda_andata_tp': 'H2O Andata Terzo Piano',
+    'h2o_calda_ricircolo_tp': 'H2O Ricircolo Terzo Piano',
+    'costo_bolletta': 'Costo Bolletta',
+}
+
+SHEET_COLUMNS = {
+    'gas_generale': 'Contatore gas generale',
+    'gas_pp': 'Contatore gas primo piano',
+    'gas_sp': 'Contatore gas secondo piano',
+    'gas_tp': 'Contatore gas terzo piano',
+    'calorie_pp_zona_giorno': 'Contatore calorie primo piano zona giorno',
+    'calorie_pp_zona_notte': 'Contatore calorie primo piano zona notte',
+    'calorie_sp': 'Contatore calorie secondo piano',
+    'calorie_tc': 'Contatore calorie taverna carlo',
+    'calorie_tp': 'Contatore calorie terzo piano',
+    'calorie_h2o_calda': 'Contatore calorie acqua calda',
+    'h2o_calda_andata_pp': 'Contatore H2O calda andata primo piano',
+    'h2o_calda_ricircolo_pp': 'Contatore H2O ricircolo primo piano',
+    'h2o_calda_andata_sp': 'Contatore H2O calda andata secondo piano',
+    'h2o_calda_ricircolo_sp': 'Contatore H2O ricircolo secondo piano',
+    'h2o_calda_andata_tp': 'Contatore H2O calda andata terzo piano',
+    'h2o_calda_ricircolo_tp': 'Contatore H2O ricircolo terzo piano',
+    'costo_bolletta': 'Costo totale bolletta gas',
+}
+
 engine = create_engine('sqlite:///contacalorie.db')
 Base.metadata.create_all(engine)
 Session = sessionmaker(bind=engine)
 
 def populate_from_sheets():
+    """Import every row of the Google Sheet, overwriting same-date records.
+
+    The Sheet was retired as the source of truth once the web UI took over;
+    this stays as the recovery path back to the historical data.
+    """
     import os.path
     import gspread
     from oauth2client.service_account import ServiceAccountCredentials
@@ -46,42 +96,18 @@ def populate_from_sheets():
     # Find a workbook by name and open the first sheet
     sheet = client.open("DBContacalorieMaiano").sheet1
 
-    # Extract all records
-    list_of_hashes = sheet.get_all_records()
-
-    session = Session()
-    for d in list_of_hashes:
-        datum = Datum(
-            id=d['Data di rilevamento'],  # Assuming data is unique
-            data=datetime.datetime.strptime(d['Data di rilevamento'], '%m/%d/%Y').date(),
-            gas_generale=d['Contatore gas generale'],
-            gas_pp=d['Contatore gas primo piano'],
-            gas_sp=d['Contatore gas secondo piano'],
-            gas_tp=d['Contatore gas terzo piano'],
-            calorie_pp_zona_giorno=d['Contatore calorie primo piano zona giorno'],
-            calorie_pp_zona_notte=d['Contatore calorie primo piano zona notte'],
-            calorie_sp=d['Contatore calorie secondo piano'],
-            calorie_tc=d['Contatore calorie taverna carlo'],
-            calorie_tp=d['Contatore calorie terzo piano'],
-            calorie_h2o_calda=d['Contatore calorie acqua calda'],
-            h2o_calda_andata_pp=d['Contatore H2O calda andata primo piano'],
-            h2o_calda_ricircolo_pp=d['Contatore H2O ricircolo primo piano'],
-            h2o_calda_andata_sp=d['Contatore H2O calda andata secondo piano'],
-            h2o_calda_ricircolo_sp=d['Contatore H2O ricircolo secondo piano'],
-            h2o_calda_andata_tp=d['Contatore H2O calda andata terzo piano'],
-            h2o_calda_ricircolo_tp=d['Contatore H2O ricircolo terzo piano'],
-            costo_bolletta=d['Costo totale bolletta gas']
-        )
-        session.add(datum)
-    session.commit()
-    session.close()
+    with Session() as session:
+        for d in sheet.get_all_records():
+            datum = Datum(data=datetime.datetime.strptime(d['Data di rilevamento'], '%m/%d/%Y').date())
+            for field, column in SHEET_COLUMNS.items():
+                setattr(datum, field, float(d[column]))
+            session.merge(datum)  # upsert by date, so re-running is harmless
+        session.commit()
     print("Data populated from Google Sheets.")
 
 def get_data():
-    session = Session()
-    data = session.query(Datum).order_by(Datum.data).all()
-    session.close()
-    return data
+    with Session() as session:
+        return session.query(Datum).order_by(Datum.data).all()
 
 def format_date_italian(date_obj):
     """Format date object as day/month/year (Italian style)"""
@@ -91,7 +117,7 @@ def format_date_italian(date_obj):
 
 class Ripartizione(object):
     def __init__(self, date=None, pp=None, sp=None, tp=None, error=None):
-        self.date = date
+        self.date = date  # (date, date) — start and end of the period
         self.pp = pp
         self.sp = sp
         self.tp = tp
@@ -109,12 +135,12 @@ class Ripartizione(object):
 
 
 def partition(d1, d2) -> Ripartizione:
-    date = (format_date_italian(d1.data), format_date_italian(d2.data))
+    date = (d1.data, d2.data)
     try:
         diff_gas_generale = d2.gas_generale - d1.gas_generale
 
         if diff_gas_generale == 0:
-            return Ripartizione(date, 0,0,0,0)
+            return Ripartizione(date, 0, 0, 0)
 
         diff_gas_pp = d2.gas_pp - d1.gas_pp
         diff_gas_sp = d2.gas_sp - d1.gas_sp

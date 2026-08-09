@@ -1,16 +1,17 @@
 #!/usr/bin/env python
 
-from reportlab.pdfgen import canvas
 import io
+
+from reportlab.pdfgen import canvas
+
+from calorie import format_date_italian
+
 point = 1
 inch = 72
 
-def data_italiana(data):
-    c = data.split("-")
-    return c[1] + "/" + c[0] + "/" + c[2]
-
 def make_pdf_file(appartamento, costo, date):
-    date = tuple(data_italiana(x) for x in date)
+    """Build the cost notice. `date` is a (start, end) pair of date objects."""
+    date = tuple(format_date_italian(d) for d in date)
     output = io.BytesIO()
     c = canvas.Canvas(output, pagesize=(8.5 * inch, 11 * inch))
     c.setStrokeColorRGB(0,0,0)
