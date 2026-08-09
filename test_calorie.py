@@ -3,78 +3,78 @@
 
 import datetime
 
-from calorie import Datum, partition
+from calorie import Reading, split_costs
 
-# Two real consecutive readings (bolletta 93.05 EUR). In this period no
+# Two real consecutive readings (bill 93.05 EUR). In this period no
 # apartment burned its own gas, so the whole bill is split through the
 # hot-water/heating calorie shares.
-GENNAIO = Datum(
-    data=datetime.date(2026, 1, 31),
-    gas_generale=3638.0, gas_pp=139.0, gas_sp=347.0, gas_tp=191.0,
-    calorie_pp_zona_giorno=7038.0, calorie_pp_zona_notte=5648.0,
-    calorie_sp=17790.0, calorie_tc=8991.0, calorie_tp=1.0,
-    calorie_h2o_calda=22331.0,
-    h2o_calda_andata_pp=59.0, h2o_calda_ricircolo_pp=0.0,
-    h2o_calda_andata_sp=503.0, h2o_calda_ricircolo_sp=0.0,
-    h2o_calda_andata_tp=64.1, h2o_calda_ricircolo_tp=1.0,
-    costo_bolletta=122.9,
+JANUARY = Reading(
+    date=datetime.date(2026, 1, 31),
+    gas_main=3638.0, gas_floor_1=139.0, gas_floor_2=347.0, gas_floor_3=191.0,
+    calories_floor_1_day_zone=7038.0, calories_floor_1_night_zone=5648.0,
+    calories_floor_2=17790.0, calories_basement=8991.0, calories_floor_3=1.0,
+    calories_hot_water=22331.0,
+    hot_water_supply_floor_1=59.0, hot_water_return_floor_1=0.0,
+    hot_water_supply_floor_2=503.0, hot_water_return_floor_2=0.0,
+    hot_water_supply_floor_3=64.1, hot_water_return_floor_3=1.0,
+    bill_cost=122.9,
 )
 
-FEBBRAIO = Datum(
-    data=datetime.date(2026, 2, 28),
-    gas_generale=3715.0, gas_pp=139.0, gas_sp=347.0, gas_tp=191.0,
-    calorie_pp_zona_giorno=7040.0, calorie_pp_zona_notte=5688.0,
-    calorie_sp=17790.0, calorie_tc=9458.0, calorie_tp=1.0,
-    calorie_h2o_calda=22421.0,
-    h2o_calda_andata_pp=60.0, h2o_calda_ricircolo_pp=0.0,
-    h2o_calda_andata_sp=503.0, h2o_calda_ricircolo_sp=0.0,
-    h2o_calda_andata_tp=64.2, h2o_calda_ricircolo_tp=1.0,
-    costo_bolletta=93.05,
+FEBRUARY = Reading(
+    date=datetime.date(2026, 2, 28),
+    gas_main=3715.0, gas_floor_1=139.0, gas_floor_2=347.0, gas_floor_3=191.0,
+    calories_floor_1_day_zone=7040.0, calories_floor_1_night_zone=5688.0,
+    calories_floor_2=17790.0, calories_basement=9458.0, calories_floor_3=1.0,
+    calories_hot_water=22421.0,
+    hot_water_supply_floor_1=60.0, hot_water_return_floor_1=0.0,
+    hot_water_supply_floor_2=503.0, hot_water_return_floor_2=0.0,
+    hot_water_supply_floor_3=64.2, hot_water_return_floor_3=1.0,
+    bill_cost=93.05,
 )
 
 
-def test_conserva_il_totale():
+def test_preserves_the_total():
     """The three shares must add up to the bill exactly — no money invented
     or lost. This is the invariant that must survive any refactoring."""
-    r = partition(GENNAIO, FEBBRAIO)
-    assert not r.is_error(), r.error
-    assert abs(r.totale() - FEBBRAIO.costo_bolletta) < 0.005, r.totale()
+    s = split_costs(JANUARY, FEBRUARY)
+    assert not s.is_error(), s.error
+    assert abs(s.total() - FEBRUARY.bill_cost) < 0.005, s.total()
 
 
-def test_valori_noti():
+def test_known_values():
     """Regression: the figures this period has always produced."""
-    r = partition(GENNAIO, FEBBRAIO)
-    assert round(r.pp, 2) == 19.23, r.pp
-    assert round(r.sp, 2) == 0.00, r.sp
-    assert round(r.tp, 2) == 73.82, r.tp
+    s = split_costs(JANUARY, FEBRUARY)
+    assert round(s.floor_1, 2) == 19.23, s.floor_1
+    assert round(s.floor_2, 2) == 0.00, s.floor_2
+    assert round(s.floor_3, 2) == 73.82, s.floor_3
 
 
-def test_periodo_a_gas_zero():
+def test_period_with_zero_gas():
     """No gas burned means nobody pays — and that is NOT an error.
-    Regression for Ripartizione(date, 0, 0, 0, 0), which used to pass the
+    Regression for CostSplit(period, 0, 0, 0, 0), which used to pass the
     fourth zero as `error` and render the period as a failure."""
-    r = partition(GENNAIO, GENNAIO)
-    assert not r.is_error(), r.error
-    assert r.totale() == 0
+    s = split_costs(JANUARY, JANUARY)
+    assert not s.is_error(), s.error
+    assert s.total() == 0
 
 
-def test_h2o_senza_consumo_e_un_errore():
+def test_no_water_use_is_an_error():
     """Gas burned but no hot water drawn anywhere divides by zero. It must
     come back as an error object, not blow up the page."""
-    fermo = Datum(**{c.name: getattr(GENNAIO, c.name)
-                     for c in Datum.__table__.columns})
-    fermo.data = datetime.date(2026, 2, 28)
-    fermo.gas_generale = GENNAIO.gas_generale + 10
-    r = partition(GENNAIO, fermo)
-    assert r.is_error()
-    assert r.date == (GENNAIO.data, fermo.data)
+    no_water = Reading(**{c.name: getattr(JANUARY, c.name)
+                          for c in Reading.__table__.columns})
+    no_water.date = datetime.date(2026, 2, 28)
+    no_water.gas_main = JANUARY.gas_main + 10
+    s = split_costs(JANUARY, no_water)
+    assert s.is_error()
+    assert s.period == (JANUARY.date, no_water.date)
 
 
-def test_date_sono_oggetti_date():
-    """The API and the report both format the period themselves, so partition
-    must hand back real dates rather than pre-formatted strings."""
-    r = partition(GENNAIO, FEBBRAIO)
-    assert r.date == (datetime.date(2026, 1, 31), datetime.date(2026, 2, 28))
+def test_period_holds_date_objects():
+    """The API and the report both format the period themselves, so
+    split_costs must hand back real dates rather than pre-formatted strings."""
+    s = split_costs(JANUARY, FEBRUARY)
+    assert s.period == (datetime.date(2026, 1, 31), datetime.date(2026, 2, 28))
 
 
 if __name__ == '__main__':
@@ -82,4 +82,4 @@ if __name__ == '__main__':
         if name.startswith('test_'):
             fn()
             print('ok', name)
-    print('tutti i test passati')
+    print('all tests passed')

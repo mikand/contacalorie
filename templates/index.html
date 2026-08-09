@@ -54,10 +54,10 @@
             <div id="formError" class="alert alert-danger d-none" role="alert"></div>
             <form id="dataForm" novalidate>
               <div class="form-group">
-                <label for="data">Data *</label>
-                <input type="date" class="form-control" id="data" required>
+                <label for="date">Data *</label>
+                <input type="date" class="form-control" id="date" required>
                 <div class="invalid-feedback"></div>
-                <small id="dataHelp" class="form-text text-muted d-none">
+                <small id="dateHelp" class="form-text text-muted d-none">
                   La data identifica il rilevamento e non si puo' modificare: per correggerla, elimina il record e ricrealo.
                 </small>
               </div>
@@ -90,9 +90,9 @@
     <script>
       const FIELDS = {{ fields|tojson }};
       const LABELS = {{ labels|tojson }};
-      const APPARTAMENTI = {pp: 'Primo Piano', sp: 'Secondo Piano', tp: 'Terzo Piano'};
+      const APARTMENTS = {floor_1: 'Primo Piano', floor_2: 'Secondo Piano', floor_3: 'Terzo Piano'};
 
-      let rows = [];             // every rilevamento, most recent first
+      let rows = [];             // every reading, most recent first
       let currentEditDate = null;
 
       const italian = iso => iso.split('-').reverse().join('/');
@@ -115,18 +115,18 @@
       async function loadRips() {
         const container = document.getElementById('rips');
         try {
-          const rips = await jsonOrThrow(await fetch('/api/ripartizioni'));
+          const rips = await jsonOrThrow(await fetch('/api/cost-splits'));
           if (!rips.length) {
             container.innerHTML = '<p class="text-muted">Servono almeno due rilevamenti per calcolare una ripartizione.</p>';
             return;
           }
           container.innerHTML = rips.map((r, i) => {
-            const titolo = `Calcolo ripartizione dal ${italian(r.da)} al ${italian(r.a)}`;
+            const title = `Calcolo ripartizione dal ${italian(r.from)} al ${italian(r.to)}`;
             const header = `
               <div class="card-header" role="tab" id="heading${i}">
                 <h5 class="mb-0">
                   <a ${i > 0 ? 'class="collapsed"' : ''} data-toggle="collapse" href="#collapse${i}"
-                     aria-expanded="${i === 0}" aria-controls="collapse${i}">${titolo}</a>
+                     aria-expanded="${i === 0}" aria-controls="collapse${i}">${title}</a>
                 </h5>
               </div>`;
             const body = r.error
@@ -134,14 +134,14 @@
               : `<div id="collapse${i}" class="collapse${i === 0 ? ' show' : ''}" role="tabpanel"
                       aria-labelledby="heading${i}" data-parent="#rips">
                    <div class="card-body">
-                     ${Object.entries(APPARTAMENTI).map(([key, nome]) => `
+                     ${Object.entries(APARTMENTS).map(([key, name]) => `
                        <p>
-                         <h3>${nome}: ${euro(r[key])} &euro;</h3>
+                         <h3>${name}: ${euro(r[key])} &euro;</h3>
                          <a class="btn btn-primary" target="_blank"
-                            href="/report/${key}/${r.da}/${r.a}">Scarica Prospetto</a>
+                            href="/report/${key}/${r.from}/${r.to}">Scarica Prospetto</a>
                        </p>`).join('')}
                      <br/>
-                     <h3>Totale: ${euro(r.totale)} &euro;</h3>
+                     <h3>Totale: ${euro(r.total)} &euro;</h3>
                    </div>
                  </div>`;
             return `<div class="card">${header}${body}</div>`;
@@ -153,15 +153,15 @@
 
       async function loadData() {
         try {
-          rows = await jsonOrThrow(await fetch('/api/data'));
-          rows.sort((a, b) => b.data.localeCompare(a.data));  // ISO dates sort as text
+          rows = await jsonOrThrow(await fetch('/api/readings'));
+          rows.sort((a, b) => b.date.localeCompare(a.date));  // ISO dates sort as text
           document.getElementById('tableBody').innerHTML = rows.map(row => `
             <tr>
-              <td>${italian(row.data)}</td>
+              <td>${italian(row.date)}</td>
               ${FIELDS.map(f => `<td>${row[f]}</td>`).join('')}
               <td class="text-nowrap">
-                <button class="btn btn-sm btn-warning" onclick="editRecord('${row.data}')">Modifica</button>
-                <button class="btn btn-sm btn-danger" onclick="deleteRecord('${row.data}')">Elimina</button>
+                <button class="btn btn-sm btn-warning" onclick="editRecord('${row.date}')">Modifica</button>
+                <button class="btn btn-sm btn-danger" onclick="deleteRecord('${row.date}')">Elimina</button>
               </td>
             </tr>`).join('');
         } catch (error) {
@@ -190,13 +190,13 @@
         clearErrors();
         document.getElementById('formModalLabel').textContent = 'Nuovo Rilevamento';
         document.getElementById('dataForm').reset();
-        const dataInput = document.getElementById('data');
-        dataInput.readOnly = false;
-        document.getElementById('dataHelp').classList.add('d-none');
-        // Prefill from the latest rilevamento already in memory: the meters
+        const dateInput = document.getElementById('date');
+        dateInput.readOnly = false;
+        document.getElementById('dateHelp').classList.add('d-none');
+        // Prefill from the latest reading already in memory: the meters
         // rarely move much, and there is no second fetch to race with typing.
         if (rows.length) FIELDS.forEach(f => {
-          document.getElementById(f).value = f === 'costo_bolletta' ? '' : rows[0][f];
+          document.getElementById(f).value = f === 'bill_cost' ? '' : rows[0][f];
         });
         $('#formModal').modal('show');
       }
@@ -204,12 +204,12 @@
       async function editRecord(isoDate) {
         clearErrors();
         try {
-          const row = await jsonOrThrow(await fetch(`/api/data/${isoDate}`));
+          const row = await jsonOrThrow(await fetch(`/api/readings/${isoDate}`));
           currentEditDate = isoDate;
           document.getElementById('formModalLabel').textContent = `Modifica rilevamento del ${italian(isoDate)}`;
-          document.getElementById('data').value = row.data;
-          document.getElementById('data').readOnly = true;
-          document.getElementById('dataHelp').classList.remove('d-none');
+          document.getElementById('date').value = row.date;
+          document.getElementById('date').readOnly = true;
+          document.getElementById('dateHelp').classList.remove('d-none');
           FIELDS.forEach(f => document.getElementById(f).value = row[f]);
           $('#formModal').modal('show');
         } catch (error) {
@@ -227,10 +227,10 @@
           valid = false;
         };
 
-        const date = document.getElementById('data').value;
-        if (!date) invalid('data', 'Indica la data del rilevamento.');
+        const date = document.getElementById('date').value;
+        if (!date) invalid('date', 'Indica la data del rilevamento.');
 
-        const payload = {data: date};
+        const payload = {date: date};
         FIELDS.forEach(f => {
           const raw = document.getElementById(f).value.trim();
           if (raw === '') return invalid(f, 'Campo obbligatorio.');
@@ -243,15 +243,15 @@
       }
 
       function confirmBackwardsMeters(payload) {
-        // The rilevamento right before this date is the one the meters must
+        // The reading right before this date is the one the meters must
         // have grown from. A meter that went down is usually a typo — but a
         // replaced meter legitimately restarts, so this only warns.
-        const previous = rows.find(r => r.data < payload.data);
+        const previous = rows.find(r => r.date < payload.date);
         if (!previous) return true;
-        const backwards = FIELDS.filter(f => f !== 'costo_bolletta' && payload[f] < previous[f]);
+        const backwards = FIELDS.filter(f => f !== 'bill_cost' && payload[f] < previous[f]);
         if (!backwards.length) return true;
         const detail = backwards.map(f => `  ${LABELS[f]}: ${previous[f]} → ${payload[f]}`).join('\n');
-        return confirm(`Contatori in calo rispetto al ${italian(previous.data)}:\n\n${detail}\n\nSalvare comunque?`);
+        return confirm(`Contatori in calo rispetto al ${italian(previous.date)}:\n\n${detail}\n\nSalvare comunque?`);
       }
 
       async function saveRecord() {
@@ -262,7 +262,7 @@
         const button = document.getElementById('saveButton');
         button.disabled = true;
         try {
-          const url = currentEditDate ? `/api/data/${currentEditDate}` : '/api/data';
+          const url = currentEditDate ? `/api/readings/${currentEditDate}` : '/api/readings';
           await jsonOrThrow(await fetch(url, {
             method: currentEditDate ? 'PUT' : 'POST',
             headers: {'Content-Type': 'application/json'},
@@ -281,7 +281,7 @@
       async function deleteRecord(isoDate) {
         if (!confirm(`Eliminare il rilevamento del ${italian(isoDate)}?`)) return;
         try {
-          await jsonOrThrow(await fetch(`/api/data/${isoDate}`, {method: 'DELETE'}));
+          await jsonOrThrow(await fetch(`/api/readings/${isoDate}`, {method: 'DELETE'}));
           toast('Rilevamento eliminato.', 'success');
           await refresh();
         } catch (error) {

@@ -101,7 +101,6 @@ ENV/
 .mypy_cache/
 
 # Contacalorie: local data and secrets, never commit
-contacalorie.db
-contacalorie.db.bak
+contacalorie.db*
 users.txt
 Contacalorie-*.json

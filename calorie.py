@@ -5,72 +5,75 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 
 Base = declarative_base()
 
-class Datum(Base):
-    __tablename__ = 'data'
+class Reading(Base):
+    __tablename__ = 'readings'
 
     # The date IS the record: one set of readings per day, uniqueness enforced
     # by the database instead of by application checks.
-    data = Column(Date, primary_key=True)
-    gas_generale = Column(Float)
-    gas_pp = Column(Float)
-    gas_sp = Column(Float)
-    gas_tp = Column(Float)
-    calorie_pp_zona_giorno = Column(Float)
-    calorie_pp_zona_notte = Column(Float)
-    calorie_sp = Column(Float)
-    calorie_tc = Column(Float)
-    calorie_tp = Column(Float)
-    calorie_h2o_calda = Column(Float)
-    h2o_calda_andata_pp = Column(Float)
-    h2o_calda_ricircolo_pp = Column(Float)
-    h2o_calda_andata_sp = Column(Float)
-    h2o_calda_ricircolo_sp = Column(Float)
-    h2o_calda_andata_tp = Column(Float)
-    h2o_calda_ricircolo_tp = Column(Float)
-    costo_bolletta = Column(Float)
+    date = Column(Date, primary_key=True)
+    gas_main = Column(Float)
+    gas_floor_1 = Column(Float)
+    gas_floor_2 = Column(Float)
+    gas_floor_3 = Column(Float)
+    calories_floor_1_day_zone = Column(Float)
+    calories_floor_1_night_zone = Column(Float)
+    calories_floor_2 = Column(Float)
+    calories_basement = Column(Float)
+    calories_floor_3 = Column(Float)
+    calories_hot_water = Column(Float)
+    hot_water_supply_floor_1 = Column(Float)
+    hot_water_return_floor_1 = Column(Float)
+    hot_water_supply_floor_2 = Column(Float)
+    hot_water_return_floor_2 = Column(Float)
+    hot_water_supply_floor_3 = Column(Float)
+    hot_water_return_floor_3 = Column(Float)
+    bill_cost = Column(Float)
 
 # Every meter except the date, in column order. Adding a meter means adding a
 # column above and a label below; nothing else in the app lists the fields.
-FIELDS = [c.name for c in Datum.__table__.columns if c.name != 'data']
+FIELDS = [c.name for c in Reading.__table__.columns if c.name != 'date']
 
+# Identifiers are English, everything the resident reads is Italian: these
+# labels are the only names for the meters that ever reach the browser.
 LABELS = {
-    'gas_generale': 'Gas Generale',
-    'gas_pp': 'Gas Primo Piano',
-    'gas_sp': 'Gas Secondo Piano',
-    'gas_tp': 'Gas Terzo Piano',
-    'calorie_pp_zona_giorno': 'Calorie Primo Piano Zona Giorno',
-    'calorie_pp_zona_notte': 'Calorie Primo Piano Zona Notte',
-    'calorie_sp': 'Calorie Secondo Piano',
-    'calorie_tc': 'Calorie Taverna Carlo',
-    'calorie_tp': 'Calorie Terzo Piano',
-    'calorie_h2o_calda': 'Calorie H2O Calda',
-    'h2o_calda_andata_pp': 'H2O Andata Primo Piano',
-    'h2o_calda_ricircolo_pp': 'H2O Ricircolo Primo Piano',
-    'h2o_calda_andata_sp': 'H2O Andata Secondo Piano',
-    'h2o_calda_ricircolo_sp': 'H2O Ricircolo Secondo Piano',
-    'h2o_calda_andata_tp': 'H2O Andata Terzo Piano',
-    'h2o_calda_ricircolo_tp': 'H2O Ricircolo Terzo Piano',
-    'costo_bolletta': 'Costo Bolletta',
+    'gas_main': 'Gas Generale',
+    'gas_floor_1': 'Gas Primo Piano',
+    'gas_floor_2': 'Gas Secondo Piano',
+    'gas_floor_3': 'Gas Terzo Piano',
+    'calories_floor_1_day_zone': 'Calorie Primo Piano Zona Giorno',
+    'calories_floor_1_night_zone': 'Calorie Primo Piano Zona Notte',
+    'calories_floor_2': 'Calorie Secondo Piano',
+    'calories_basement': 'Calorie Taverna Carlo',
+    'calories_floor_3': 'Calorie Terzo Piano',
+    'calories_hot_water': 'Calorie H2O Calda',
+    'hot_water_supply_floor_1': 'H2O Andata Primo Piano',
+    'hot_water_return_floor_1': 'H2O Ricircolo Primo Piano',
+    'hot_water_supply_floor_2': 'H2O Andata Secondo Piano',
+    'hot_water_return_floor_2': 'H2O Ricircolo Secondo Piano',
+    'hot_water_supply_floor_3': 'H2O Andata Terzo Piano',
+    'hot_water_return_floor_3': 'H2O Ricircolo Terzo Piano',
+    'bill_cost': 'Costo Bolletta',
 }
 
+# The Sheet's own column headings, which are Italian and not ours to rename.
 SHEET_COLUMNS = {
-    'gas_generale': 'Contatore gas generale',
-    'gas_pp': 'Contatore gas primo piano',
-    'gas_sp': 'Contatore gas secondo piano',
-    'gas_tp': 'Contatore gas terzo piano',
-    'calorie_pp_zona_giorno': 'Contatore calorie primo piano zona giorno',
-    'calorie_pp_zona_notte': 'Contatore calorie primo piano zona notte',
-    'calorie_sp': 'Contatore calorie secondo piano',
-    'calorie_tc': 'Contatore calorie taverna carlo',
-    'calorie_tp': 'Contatore calorie terzo piano',
-    'calorie_h2o_calda': 'Contatore calorie acqua calda',
-    'h2o_calda_andata_pp': 'Contatore H2O calda andata primo piano',
-    'h2o_calda_ricircolo_pp': 'Contatore H2O ricircolo primo piano',
-    'h2o_calda_andata_sp': 'Contatore H2O calda andata secondo piano',
-    'h2o_calda_ricircolo_sp': 'Contatore H2O ricircolo secondo piano',
-    'h2o_calda_andata_tp': 'Contatore H2O calda andata terzo piano',
-    'h2o_calda_ricircolo_tp': 'Contatore H2O ricircolo terzo piano',
-    'costo_bolletta': 'Costo totale bolletta gas',
+    'gas_main': 'Contatore gas generale',
+    'gas_floor_1': 'Contatore gas primo piano',
+    'gas_floor_2': 'Contatore gas secondo piano',
+    'gas_floor_3': 'Contatore gas terzo piano',
+    'calories_floor_1_day_zone': 'Contatore calorie primo piano zona giorno',
+    'calories_floor_1_night_zone': 'Contatore calorie primo piano zona notte',
+    'calories_floor_2': 'Contatore calorie secondo piano',
+    'calories_basement': 'Contatore calorie taverna carlo',
+    'calories_floor_3': 'Contatore calorie terzo piano',
+    'calories_hot_water': 'Contatore calorie acqua calda',
+    'hot_water_supply_floor_1': 'Contatore H2O calda andata primo piano',
+    'hot_water_return_floor_1': 'Contatore H2O ricircolo primo piano',
+    'hot_water_supply_floor_2': 'Contatore H2O calda andata secondo piano',
+    'hot_water_return_floor_2': 'Contatore H2O ricircolo secondo piano',
+    'hot_water_supply_floor_3': 'Contatore H2O calda andata terzo piano',
+    'hot_water_return_floor_3': 'Contatore H2O ricircolo terzo piano',
+    'bill_cost': 'Costo totale bolletta gas',
 }
 
 engine = create_engine('sqlite:///contacalorie.db')
@@ -97,17 +100,17 @@ def populate_from_sheets():
     sheet = client.open("DBContacalorieMaiano").sheet1
 
     with Session() as session:
-        for d in sheet.get_all_records():
-            datum = Datum(data=datetime.datetime.strptime(d['Data di rilevamento'], '%m/%d/%Y').date())
+        for row in sheet.get_all_records():
+            reading = Reading(date=datetime.datetime.strptime(row['Data di rilevamento'], '%m/%d/%Y').date())
             for field, column in SHEET_COLUMNS.items():
-                setattr(datum, field, float(d[column]))
-            session.merge(datum)  # upsert by date, so re-running is harmless
+                setattr(reading, field, float(row[column]))
+            session.merge(reading)  # upsert by date, so re-running is harmless
         session.commit()
     print("Data populated from Google Sheets.")
 
-def get_data():
+def get_readings():
     with Session() as session:
-        return session.query(Datum).order_by(Datum.data).all()
+        return session.query(Reading).order_by(Reading.date).all()
 
 def format_date_italian(date_obj):
     """Format date object as day/month/year (Italian style)"""
@@ -115,69 +118,73 @@ def format_date_italian(date_obj):
         return ""
     return date_obj.strftime('%d/%m/%Y')
 
-class Ripartizione(object):
-    def __init__(self, date=None, pp=None, sp=None, tp=None, error=None):
-        self.date = date  # (date, date) — start and end of the period
-        self.pp = pp
-        self.sp = sp
-        self.tp = tp
+class CostSplit(object):
+    def __init__(self, period=None, floor_1=None, floor_2=None, floor_3=None, error=None):
+        self.period = period  # (date, date) — start and end of the period
+        self.floor_1 = floor_1
+        self.floor_2 = floor_2
+        self.floor_3 = floor_3
         self.error = error
 
     def is_error(self):
         return self.error is not None
 
-    def totale(self):
-        return self.pp + self.sp + self.tp
+    def total(self):
+        return self.floor_1 + self.floor_2 + self.floor_3
 
     def __str__(self):
-        return "PP: %s\nSP: %s\nTP: %s\n=========\nTOT: %s" % \
-            (self.pp, self.sp, self.tp, self.totale())
+        return "Floor 1: %s\nFloor 2: %s\nFloor 3: %s\n=========\nTOT: %s" % \
+            (self.floor_1, self.floor_2, self.floor_3, self.total())
 
 
-def partition(d1, d2) -> Ripartizione:
-    date = (d1.data, d2.data)
+def split_costs(r1, r2) -> CostSplit:
+    """Split the bill between the three apartments over the period r1..r2.
+
+    The basement is billed together with floor 3; it has no share of its own.
+    """
+    period = (r1.date, r2.date)
     try:
-        diff_gas_generale = d2.gas_generale - d1.gas_generale
+        diff_gas_main = r2.gas_main - r1.gas_main
 
-        if diff_gas_generale == 0:
-            return Ripartizione(date, 0, 0, 0)
+        if diff_gas_main == 0:
+            return CostSplit(period, 0, 0, 0)
 
-        diff_gas_pp = d2.gas_pp - d1.gas_pp
-        diff_gas_sp = d2.gas_sp - d1.gas_sp
-        diff_gas_tp = d2.gas_tp - d1.gas_tp
+        diff_gas_floor_1 = r2.gas_floor_1 - r1.gas_floor_1
+        diff_gas_floor_2 = r2.gas_floor_2 - r1.gas_floor_2
+        diff_gas_floor_3 = r2.gas_floor_3 - r1.gas_floor_3
 
-        euro_per_mc = d2.costo_bolletta / diff_gas_generale
-        gas_h2o_calda = diff_gas_generale - diff_gas_tp - diff_gas_sp - diff_gas_pp
-        costo_h2o_calda = euro_per_mc * gas_h2o_calda
+        euro_per_m3 = r2.bill_cost / diff_gas_main
+        gas_hot_water = diff_gas_main - diff_gas_floor_3 - diff_gas_floor_2 - diff_gas_floor_1
+        cost_hot_water = euro_per_m3 * gas_hot_water
 
-        diff_calorie_pp_zona_giorno = d2.calorie_pp_zona_giorno - d1.calorie_pp_zona_giorno
-        diff_calorie_pp_zona_notte = d2.calorie_pp_zona_notte - d1.calorie_pp_zona_notte
-        diff_calorie_pp = diff_calorie_pp_zona_giorno + diff_calorie_pp_zona_notte
-        diff_calorie_sp = d2.calorie_sp - d1.calorie_sp
-        diff_calorie_tc = d2.calorie_tc - d1.calorie_tc
-        diff_calorie_tp = d2.calorie_tp - d1.calorie_tp
+        diff_calories_floor_1_day_zone = r2.calories_floor_1_day_zone - r1.calories_floor_1_day_zone
+        diff_calories_floor_1_night_zone = r2.calories_floor_1_night_zone - r1.calories_floor_1_night_zone
+        diff_calories_floor_1 = diff_calories_floor_1_day_zone + diff_calories_floor_1_night_zone
+        diff_calories_floor_2 = r2.calories_floor_2 - r1.calories_floor_2
+        diff_calories_basement = r2.calories_basement - r1.calories_basement
+        diff_calories_floor_3 = r2.calories_floor_3 - r1.calories_floor_3
 
-        totale_calorie_riscaldamento = diff_calorie_pp + diff_calorie_sp + diff_calorie_tc + diff_calorie_tp
-        diff_calorie_h2o_calda = d2.calorie_h2o_calda - d1.calorie_h2o_calda
+        total_heating_calories = diff_calories_floor_1 + diff_calories_floor_2 + diff_calories_basement + diff_calories_floor_3
+        diff_calories_hot_water = r2.calories_hot_water - r1.calories_hot_water
 
-        consumo_h2o_pp = (d2.h2o_calda_andata_pp - d1.h2o_calda_andata_pp) - (d2.h2o_calda_ricircolo_pp - d1.h2o_calda_ricircolo_pp)
-        consumo_h2o_sp = (d2.h2o_calda_andata_sp - d1.h2o_calda_andata_sp) - (d2.h2o_calda_ricircolo_sp - d1.h2o_calda_ricircolo_sp)
-        consumo_h2o_tp = (d2.h2o_calda_andata_tp - d1.h2o_calda_andata_tp) - (d2.h2o_calda_ricircolo_tp - d1.h2o_calda_ricircolo_tp)
-        consumo_totale_h2o = consumo_h2o_pp + consumo_h2o_sp + consumo_h2o_tp
+        water_use_floor_1 = (r2.hot_water_supply_floor_1 - r1.hot_water_supply_floor_1) - (r2.hot_water_return_floor_1 - r1.hot_water_return_floor_1)
+        water_use_floor_2 = (r2.hot_water_supply_floor_2 - r1.hot_water_supply_floor_2) - (r2.hot_water_return_floor_2 - r1.hot_water_return_floor_2)
+        water_use_floor_3 = (r2.hot_water_supply_floor_3 - r1.hot_water_supply_floor_3) - (r2.hot_water_return_floor_3 - r1.hot_water_return_floor_3)
+        total_water_use = water_use_floor_1 + water_use_floor_2 + water_use_floor_3
 
-        ripartizione_pp = diff_calorie_pp + (diff_calorie_h2o_calda / consumo_totale_h2o) * consumo_h2o_pp
-        ripartizione_sp = diff_calorie_sp + (diff_calorie_h2o_calda / consumo_totale_h2o) * consumo_h2o_sp
-        ripartizione_tp = (diff_calorie_tc + diff_calorie_tp) + (diff_calorie_h2o_calda / consumo_totale_h2o) * consumo_h2o_tp
+        share_floor_1 = diff_calories_floor_1 + (diff_calories_hot_water / total_water_use) * water_use_floor_1
+        share_floor_2 = diff_calories_floor_2 + (diff_calories_hot_water / total_water_use) * water_use_floor_2
+        share_floor_3 = (diff_calories_basement + diff_calories_floor_3) + (diff_calories_hot_water / total_water_use) * water_use_floor_3
 
-        res = Ripartizione()
-        res.date = date
-        res.pp = euro_per_mc * diff_gas_pp + costo_h2o_calda / (totale_calorie_riscaldamento + diff_calorie_h2o_calda) * ripartizione_pp
-        res.sp = euro_per_mc * diff_gas_sp + costo_h2o_calda / (totale_calorie_riscaldamento + diff_calorie_h2o_calda) * ripartizione_sp
-        res.tp = euro_per_mc * diff_gas_tp + costo_h2o_calda / (totale_calorie_riscaldamento + diff_calorie_h2o_calda) * ripartizione_tp
+        split = CostSplit()
+        split.period = period
+        split.floor_1 = euro_per_m3 * diff_gas_floor_1 + cost_hot_water / (total_heating_calories + diff_calories_hot_water) * share_floor_1
+        split.floor_2 = euro_per_m3 * diff_gas_floor_2 + cost_hot_water / (total_heating_calories + diff_calories_hot_water) * share_floor_2
+        split.floor_3 = euro_per_m3 * diff_gas_floor_3 + cost_hot_water / (total_heating_calories + diff_calories_hot_water) * share_floor_3
 
-        return res
+        return split
     except Exception as e:
-        res = Ripartizione()
-        res.date = date
-        res.error = str(e)
-        return res
+        split = CostSplit()
+        split.period = period
+        split.error = str(e)
+        return split

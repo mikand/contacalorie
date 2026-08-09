@@ -5,12 +5,14 @@ from flask import Flask, render_template, send_file, jsonify, request
 
 from report import make_pdf_file
 from utils import requires_auth
-from calorie import (FIELDS, LABELS, Datum, Session, format_date_italian,
-                     get_data, partition)
+from calorie import (FIELDS, LABELS, Reading, Session, format_date_italian,
+                     get_readings, split_costs)
 
 app = Flask(__name__)
 
-APPARTAMENTI = {'pp': 'Primo Piano', 'sp': 'Secondo Piano', 'tp': 'Terzo Piano'}
+# Keys are the identifiers used in URLs, JSON and CostSplit attributes;
+# values are what the resident sees.
+APARTMENTS = {'floor_1': 'Primo Piano', 'floor_2': 'Secondo Piano', 'floor_3': 'Terzo Piano'}
 
 
 @app.errorhandler(ValueError)
@@ -41,9 +43,9 @@ def parse_values(payload):
     return values
 
 
-def to_dict(record):
-    return dict({'data': record.data.isoformat()},
-                **{f: getattr(record, f) for f in FIELDS})
+def to_dict(reading):
+    return dict({'date': reading.date.isoformat()},
+                **{f: getattr(reading, f) for f in FIELDS})
 
 
 @app.route('/')
@@ -55,112 +57,112 @@ def index():
                            copyright_date=datetime.date.today().year)
 
 
-@app.route('/report/<string:appartamento>/<string:data1>/<string:data2>')
+@app.route('/report/<string:apartment>/<string:date1>/<string:date2>')
 @requires_auth
-def report(appartamento, data1, data2):
-    if appartamento not in APPARTAMENTI:
-        raise ValueError("Appartamento sconosciuto: %r" % appartamento)
-    date1, date2 = parse_date(data1), parse_date(data2)
+def report(apartment, date1, date2):
+    if apartment not in APARTMENTS:
+        raise ValueError("Appartamento sconosciuto: %r" % apartment)
+    start, end = parse_date(date1), parse_date(date2)
 
     with Session() as session:
-        d1 = session.get(Datum, date1)
-        d2 = session.get(Datum, date2)
+        r1 = session.get(Reading, start)
+        r2 = session.get(Reading, end)
 
-    if d1 is None or d2 is None:
+    if r1 is None or r2 is None:
         return jsonify({'error': 'Rilevamento non trovato'}), 404
 
     # The amount is recomputed here rather than taken from the URL, so the
     # notice can never disagree with what the site shows.
-    rip = partition(d1, d2)
-    if rip.is_error():
-        return jsonify({'error': "Impossibile calcolare la ripartizione: %s" % rip.error}), 400
+    split = split_costs(r1, r2)
+    if split.is_error():
+        return jsonify({'error': "Impossibile calcolare la ripartizione: %s" % split.error}), 400
 
-    nome = APPARTAMENTI[appartamento]
-    return send_file(make_pdf_file(nome, getattr(rip, appartamento), (date1, date2)),
+    name = APARTMENTS[apartment]
+    return send_file(make_pdf_file(name, getattr(split, apartment), (start, end)),
                      mimetype='application/pdf',
-                     download_name="Ripartizione %s %s.pdf" % (nome, date2.isoformat()))
+                     download_name="Ripartizione %s %s.pdf" % (name, end.isoformat()))
 
 
-@app.route('/api/ripartizioni', methods=['GET'])
+@app.route('/api/cost-splits', methods=['GET'])
 @requires_auth
-def api_ripartizioni():
-    data = get_data()
-    rips = []
-    for prev, curr in zip(data, data[1:]):
-        rip = partition(prev, curr)
-        rips.append({
-            'da': prev.data.isoformat(),
-            'a': curr.data.isoformat(),
-            'error': rip.error,
-            'pp': rip.pp,
-            'sp': rip.sp,
-            'tp': rip.tp,
-            'totale': None if rip.is_error() else rip.totale(),
+def api_cost_splits():
+    readings = get_readings()
+    splits = []
+    for previous, current in zip(readings, readings[1:]):
+        split = split_costs(previous, current)
+        splits.append({
+            'from': previous.date.isoformat(),
+            'to': current.date.isoformat(),
+            'error': split.error,
+            'floor_1': split.floor_1,
+            'floor_2': split.floor_2,
+            'floor_3': split.floor_3,
+            'total': None if split.is_error() else split.total(),
         })
-    rips.reverse()  # most recent period first
-    return jsonify(rips)
+    splits.reverse()  # most recent period first
+    return jsonify(splits)
 
 
-@app.route('/api/data', methods=['GET'])
+@app.route('/api/readings', methods=['GET'])
 @requires_auth
-def api_get_data():
-    return jsonify([to_dict(record) for record in get_data()])
+def api_get_readings():
+    return jsonify([to_dict(reading) for reading in get_readings()])
 
 
-@app.route('/api/data/<string:record_date>', methods=['GET'])
+@app.route('/api/readings/<string:reading_date>', methods=['GET'])
 @requires_auth
-def api_get_record(record_date):
+def api_get_reading(reading_date):
     with Session() as session:
-        record = session.get(Datum, parse_date(record_date))
-        if record is None:
+        reading = session.get(Reading, parse_date(reading_date))
+        if reading is None:
             return jsonify({'error': 'Rilevamento non trovato'}), 404
-        return jsonify(to_dict(record))
+        return jsonify(to_dict(reading))
 
 
-@app.route('/api/data', methods=['POST'])
+@app.route('/api/readings', methods=['POST'])
 @requires_auth
-def api_create_record():
+def api_create_reading():
     payload = request.get_json(silent=True) or {}
-    date = parse_date(payload.get('data'))
+    date = parse_date(payload.get('date'))
     values = parse_values(payload)
 
     with Session() as session:
-        if session.get(Datum, date) is not None:
+        if session.get(Reading, date) is not None:
             return jsonify({'error': "Esiste già un rilevamento per il %s"
                                      % format_date_italian(date)}), 409
-        session.add(Datum(data=date, **values))
+        session.add(Reading(date=date, **values))
         session.commit()
 
     return jsonify({'message': 'Rilevamento creato'}), 201
 
 
-@app.route('/api/data/<string:record_date>', methods=['PUT'])
+@app.route('/api/readings/<string:reading_date>', methods=['PUT'])
 @requires_auth
-def api_update_record(record_date):
-    date = parse_date(record_date)
-    # The date is the primary key and comes from the URL only: any 'data' in
+def api_update_reading(reading_date):
+    date = parse_date(reading_date)
+    # The date is the primary key and comes from the URL only: any 'date' in
     # the body is ignored, so the key can never drift from the record.
     values = parse_values(request.get_json(silent=True) or {})
 
     with Session() as session:
-        record = session.get(Datum, date)
-        if record is None:
+        reading = session.get(Reading, date)
+        if reading is None:
             return jsonify({'error': 'Rilevamento non trovato'}), 404
         for field, value in values.items():
-            setattr(record, field, value)
+            setattr(reading, field, value)
         session.commit()
 
     return jsonify({'message': 'Rilevamento aggiornato'}), 200
 
 
-@app.route('/api/data/<string:record_date>', methods=['DELETE'])
+@app.route('/api/readings/<string:reading_date>', methods=['DELETE'])
 @requires_auth
-def api_delete_record(record_date):
+def api_delete_reading(reading_date):
     with Session() as session:
-        record = session.get(Datum, parse_date(record_date))
-        if record is None:
+        reading = session.get(Reading, parse_date(reading_date))
+        if reading is None:
             return jsonify({'error': 'Rilevamento non trovato'}), 404
-        session.delete(record)
+        session.delete(reading)
         session.commit()
 
     return jsonify({'message': 'Rilevamento eliminato'}), 200

@@ -33,10 +33,13 @@ def is_cleartext():
     return forwarded == 'http' and not local
 
 def authenticate():
-    """Sends a 401 response that enables basic auth"""
+    """Sends a 401 response that enables basic auth.
+
+    The body reaches a browser, so it is Italian like every other response.
+    """
     return Response(
-    'Could not verify your access level for that URL.\n'
-    'You have to login with proper credentials', 401,
+    'Credenziali non valide o mancanti.\n'
+    'Accedi con nome utente e password.', 401,
     {'WWW-Authenticate': 'Basic realm="Login Required"'})
 
 def requires_auth(f):
@@ -57,5 +60,5 @@ if __name__ == '__main__':
     import sys
 
     if len(sys.argv) != 2:
-        sys.exit("uso: python utils.py <username>")
+        sys.exit("usage: python utils.py <username>")
     print("%s:%s" % (sys.argv[1], generate_password_hash(getpass.getpass("password: "))))
